@@ -1,0 +1,1182 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>E6 Mizar</title>
+<meta name="theme-color" content="#1B2A4E">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="E6 Mizar">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231B2A4E'/%3E%3Cpath d='M13 4l2 7 7 2-7 2-2 7-2-7-7-2 7-2z' fill='%23E9B23A'/%3E%3Ccircle cx='24' cy='24' r='2.6' fill='%23E9B23A'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#EDF0F5; --surface:#FFFFFF; --surface-2:#F5F7FA; --ink:#16213A; --muted:#58637D; --line:#D8DEE8;
+  --night:#1B2A4E; --night-2:#24365F; --night-ink:#F1F4FA; --night-muted:#AEB9D3;
+  --star:#C98A10; --star-on-night:#E9B23A; --star-soft:#FBF1D9;
+  --ok:#1E7D4E; --ok-bg:#DCF1E5; --no:#AE4239; --no-bg:#F8E1DE;
+  --c3:#23867B; --c4:#3A62C2; --c1b:#7853A6; --c2b:#B53D57;
+  --font:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --display:"Bricolage Grotesque","Figtree",system-ui,sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1525; --surface:#162038; --surface-2:#1B2742; --ink:#E7ECF6; --muted:#9CA8C2; --line:#2B3858;
+    --night:#0A1121; --night-2:#152240; --night-ink:#EEF2FA; --night-muted:#93A0BE;
+    --star:#EDBC4F; --star-on-night:#EDBC4F; --star-soft:#3A2F14;
+    --ok:#53C48D; --ok-bg:#12382A; --no:#F07D72; --no-bg:#40201D;
+    --c3:#3DB3A5; --c4:#6F93EA; --c1b:#A688D3; --c2b:#E2718A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1525; --surface:#162038; --surface-2:#1B2742; --ink:#E7ECF6; --muted:#9CA8C2; --line:#2B3858;
+  --night:#0A1121; --night-2:#152240; --night-ink:#EEF2FA; --night-muted:#93A0BE;
+  --star:#EDBC4F; --star-on-night:#EDBC4F; --star-soft:#3A2F14;
+  --ok:#53C48D; --ok-bg:#12382A; --no:#F07D72; --no-bg:#40201D;
+  --c3:#3DB3A5; --c4:#6F93EA; --c1b:#A688D3; --c2b:#E2718A;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--night)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--star);outline-offset:2px}
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+h1,h2,h3{font-family:var(--display);font-weight:700;line-height:1.15;margin:0}
+
+/* Cabecera */
+.aviso-demo{background:var(--star-soft);color:var(--ink);font-size:.88rem;padding:.5rem 1rem;text-align:center}
+.cab{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--night);color:var(--night-ink)}
+.cab-fila{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.7rem clamp(1rem,3vw,2rem) .3rem;max-width:1400px;margin:0 auto}
+.marca{display:flex;align-items:center;gap:.55rem;font-family:var(--display);font-weight:700;font-size:1.3rem;letter-spacing:-.01em}
+.marca .logo{width:30px;height:30px;color:var(--star-on-night)}
+.quien{display:flex;align-items:center;gap:.8rem;text-align:right}
+.quien strong{display:block;font-weight:600}
+.quien small{display:block;color:var(--night-muted);font-size:.8rem}
+.tabs{display:flex;gap:.2rem;overflow-x:auto;padding:0 clamp(.6rem,3vw,1.6rem);max-width:1400px;margin:0 auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{background:none;border:0;color:var(--night-muted);padding:.65rem .75rem .7rem;cursor:pointer;white-space:nowrap;font-weight:600;border-bottom:3px solid transparent}
+.tab:hover{color:var(--night-ink)}
+.tab.on{color:var(--night-ink);border-bottom-color:var(--star-on-night)}
+
+/* Estructura */
+.main{max-width:1400px;margin:0 auto;padding:1.2rem clamp(.8rem,3vw,2rem) 3rem}
+.barra{display:flex;flex-wrap:wrap;align-items:center;gap:.7rem 1rem;margin-bottom:1rem}
+.ayuda{color:var(--muted);font-size:.9rem;margin:-.3rem 0 1rem}
+.nota{color:var(--muted);font-size:.88rem;margin:.6rem 0 0}
+.bloque{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:1rem;margin-bottom:1.1rem}
+.bloque-cab{display:flex;align-items:center;gap:.6rem;margin-bottom:.8rem;flex-wrap:wrap}
+.bloque-cab h2{font-size:1.25rem}
+.punto{width:12px;height:12px;border-radius:50%;background:var(--cc);flex:none}
+.meta{color:var(--muted);font-size:.9rem}
+.vacio{border:1px dashed var(--line);border-radius:10px;padding:1.1rem;color:var(--muted);text-align:center;background:var(--surface-2)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:1rem;margin-bottom:1.1rem}
+.panel h3{font-size:1.05rem;margin-bottom:.7rem}
+h2.seccion{font-size:1.15rem;margin:1.6rem 0 .7rem}
+
+/* Controles */
+.btn{background:var(--night);color:var(--night-ink);border:1px solid var(--night);border-radius:9px;padding:.55rem 1rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--night-2)}
+.btn.sec{background:var(--surface);color:var(--ink);border-color:var(--line)}
+.btn.sec:hover{background:var(--surface-2)}
+.btn.peq{padding:.35rem .7rem;font-size:.88rem}
+.btn.peligro{background:var(--no);border-color:var(--no);color:#fff}
+.btn.fantasma{background:transparent;border-color:var(--night-muted);color:var(--night-ink)}
+.btn.ancho{width:100%}
+.enlace{background:none;border:0;color:inherit;text-decoration:underline;cursor:pointer;padding:.2rem;font-size:.9rem}
+.icono{width:38px;height:38px;border-radius:9px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:1.2rem;line-height:1}
+.mesnav{display:flex;align-items:center;gap:.4rem}
+.mes-label{font-family:var(--display);font-weight:700;font-size:1.15rem;min-width:11ch;text-align:center}
+.chips{display:flex;flex-wrap:wrap;gap:.35rem}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:.38rem .8rem;cursor:pointer;font-weight:600;font-size:.9rem;display:inline-flex;align-items:center;gap:.4rem}
+.chip::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--cc)}
+.chip.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.chip.fijo{cursor:default}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:.45rem .85rem;cursor:pointer;font-weight:600;font-size:.9rem}
+.seg button.on{background:var(--ink);color:var(--surface)}
+select,input[type=text],input[type=email],input[type=password],input[type=date],input:not([type]){border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:.5rem .65rem;min-height:40px;max-width:100%}
+label{display:flex;flex-direction:column;gap:.25rem;font-size:.88rem;font-weight:600;color:var(--muted)}
+label input,label select{color:var(--ink);font-weight:400;font-size:1rem}
+label.check{flex-direction:row;align-items:center;gap:.45rem;font-weight:500;color:var(--ink);font-size:.95rem}
+label.sel{display:inline-flex}
+.campos{display:flex;flex-wrap:wrap;gap:.8rem;align-items:flex-end}
+.campos label{flex:1 1 180px}
+fieldset{border:0;padding:0;margin:.9rem 0}
+legend{font-size:.88rem;font-weight:600;color:var(--muted);margin-bottom:.4rem}
+.cursos-check{display:flex;flex-wrap:wrap;gap:.4rem 1.2rem}
+
+/* Tabla de seguimiento */
+.tabla-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.tabla{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
+.tabla th,.tabla td{border-bottom:1px solid var(--line);padding:.35rem .4rem;text-align:center;vertical-align:middle}
+.tabla thead th{background:var(--surface-2);font-size:.82rem;font-weight:600;color:var(--muted)}
+.tabla th.grupo{font-family:var(--display);font-size:.9rem;color:var(--ink);text-align:left;padding:.5rem .6rem}
+.tabla th.grupo.accion{border-top:3px solid var(--star)}
+.tabla th.grupo.evento{border-top:3px solid var(--night-2)}
+.tabla th.col{width:92px;min-width:92px;max-width:110px}
+.tabla th.grupo.semanal{border-top:3px solid var(--ok)}
+.tabla th.grupo.agregado{border-top:3px solid var(--muted)}
+.tabla th.ini,.tabla td.ini{border-left:1px solid var(--line)}
+.agr{display:inline-block;min-width:46px;padding:.45rem .3rem;border-radius:9px;background:var(--surface-2);font-weight:700;font-variant-numeric:tabular-nums}
+.col-nom{display:block;line-height:1.2;color:var(--ink)}
+.col-fecha{display:block;font-size:.76rem;color:var(--muted);margin-top:.15rem}
+.tabla .nom{position:sticky;left:0;z-index:1;background:var(--surface);text-align:left;min-width:150px;max-width:210px;padding-left:.7rem;border-right:1px solid var(--line)}
+.tabla thead .nom{background:var(--surface-2);z-index:2}
+.tabla .nom span{display:block;font-weight:600}
+.tabla .nom small{display:block;color:var(--muted);font-weight:400;font-size:.78rem}
+.tabla tbody tr:hover td,.tabla tbody tr:hover .nom{background:var(--surface-2)}
+.tabla tfoot td,.tabla tfoot th{background:var(--surface-2);font-weight:700;font-size:.88rem;border-bottom:0}
+.celda{width:46px;height:40px;border-radius:9px;border:1.5px dashed var(--line);background:transparent;cursor:pointer;font-size:1.15rem;font-weight:700;line-height:1}
+.celda.si{background:var(--ok-bg);color:var(--ok);border:1.5px solid var(--ok)}
+.celda:active{transform:scale(.94)}
+
+/* Listas */
+.lista{list-style:none;margin:0;padding:0}
+.lista li{display:flex;align-items:center;gap:.7rem;padding:.55rem 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.lista li:last-child{border-bottom:0}
+.li-nom{flex:1 1 160px;font-weight:600}
+.li-nom small{display:block;font-weight:400;color:var(--muted);font-size:.82rem}
+.estado-off{color:var(--no);font-size:.82rem;font-weight:600}
+.bajas{margin-top:.8rem;color:var(--muted)}
+.bajas summary{cursor:pointer;font-weight:600}
+
+/* Resumen y dashboard */
+.datos{border-collapse:collapse;width:100%;font-size:.93rem}
+.datos th,.datos td{padding:.5rem .55rem;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+.datos thead th{font-size:.82rem;color:var(--muted);font-weight:600}
+.datos td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mini{display:inline-block;width:80px;height:8px;border-radius:4px;background:var(--line);vertical-align:middle;margin-left:.5rem;overflow:hidden}
+.mini > span{display:block;height:100%;background:var(--ok);border-radius:4px}
+.bajo .mini > span{background:var(--no)}
+.bajo td:first-child{color:var(--no)}
+.pendientes{margin-top:.8rem;padding:.7rem .8rem;background:var(--star-soft);border-radius:10px;font-size:.92rem}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.8rem;margin-bottom:1.1rem}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.9rem 1rem}
+.kpi b{display:block;font-family:var(--display);font-size:2rem;line-height:1.1}
+.kpi span{color:var(--muted);font-size:.9rem}
+.rejilla{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:1.1rem}
+.grafico{position:relative;height:280px}
+.grafico.alto{height:auto;min-height:220px}
+.envoltura{overflow-x:auto}
+
+/* Login */
+.login{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:1.5rem;background:
+  radial-gradient(1.5px 1.5px at 18% 22%,var(--night-muted) 50%,transparent 51%),
+  radial-gradient(1px 1px at 72% 14%,var(--night-muted) 50%,transparent 51%),
+  radial-gradient(1.5px 1.5px at 84% 64%,var(--night-muted) 50%,transparent 51%),
+  radial-gradient(1px 1px at 30% 78%,var(--night-muted) 50%,transparent 51%),
+  radial-gradient(1px 1px at 55% 42%,var(--night-muted) 50%,transparent 51%),
+  var(--night)}
+.login-caja{width:min(400px,100%);color:var(--night-ink)}
+.login-caja .logo{width:64px;height:64px;color:var(--star-on-night)}
+.login-caja h1{font-size:2.6rem;letter-spacing:-.02em;margin:.4rem 0 .2rem}
+.login-caja .sub{color:var(--night-muted);margin:0 0 1.5rem}
+.login-form{background:var(--surface);color:var(--ink);border-radius:16px;padding:1.2rem;display:flex;flex-direction:column;gap:.8rem}
+.login-form .enlace{align-self:center;color:var(--muted)}
+.error{color:var(--no);font-size:.9rem;margin:0;min-height:1.2em}
+.ok-msg{color:var(--ok)}
+.demo-accesos{margin-top:1.2rem}
+.demo-accesos p{color:var(--night-muted);font-size:.9rem;margin:0 0 .5rem}
+.demo-accesos div{display:flex;flex-wrap:wrap;gap:.4rem}
+.demo-accesos button{background:var(--night-2);color:var(--night-ink);border:1px solid var(--night-muted);border-radius:999px;padding:.35rem .75rem;cursor:pointer;font-size:.85rem}
+.centro{min-height:60vh;display:grid;place-items:center;text-align:center;padding:2rem;color:var(--muted)}
+
+/* Modal y avisos */
+.modal{border:0;border-radius:16px;padding:0;width:min(460px,calc(100% - 2rem));background:var(--surface);color:var(--ink)}
+.modal::backdrop{background:rgba(10,17,33,.55)}
+.modal form{padding:1.2rem;display:flex;flex-direction:column;gap:.8rem}
+.modal h3{font-size:1.2rem}
+.modal-cuerpo{display:flex;flex-direction:column;gap:.8rem}
+.modal-cuerpo p{margin:0;color:var(--muted)}
+.modal-pie{display:flex;justify-content:flex-end;gap:.5rem;margin-top:.4rem}
+#toast{position:fixed;left:50%;bottom:calc(1.2rem + env(safe-area-inset-bottom,0px));transform:translate(-50%,150%);background:var(--ink);color:var(--surface);padding:.65rem 1rem;border-radius:10px;font-weight:600;font-size:.92rem;z-index:50;transition:transform .25s;max-width:calc(100% - 2rem)}
+#toast.ver{transform:translate(-50%,0)}
+.yo{background:none;border:0;color:inherit;text-align:right;cursor:pointer;padding:.2rem .3rem;border-radius:8px}
+.yo:hover{background:var(--night-2)}
+.tab.sugerir{margin-left:auto;color:var(--star-on-night)}
+.dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:1.1rem}
+.dash .bloque{margin:0}
+.w-ancho{grid-column:1/-1}
+.w-ctrl{margin-left:auto;display:flex;gap:.3rem;align-items:center}
+.w-ctrl .icono{width:32px;height:32px;font-size:1rem}
+.kpi-n{display:block;font-family:var(--display);font-size:2.6rem;line-height:1}
+.obj{position:relative;height:12px;border-radius:6px;background:var(--line);margin:.8rem 0 .2rem}
+.obj span{display:block;height:100%;border-radius:6px;background:var(--night-2)}
+.obj i{position:absolute;top:-4px;width:3px;height:20px;background:var(--ink);border-radius:2px;transform:translateX(-1px)}
+.est-ok .obj span{background:var(--ok)} .est-ok .kpi-n{color:var(--ok)}
+.est-medio .obj span{background:var(--star)} .est-medio .kpi-n{color:var(--star)}
+.est-bajo .obj span{background:var(--no)} .est-bajo .kpi-n{color:var(--no)}
+.fila-bajo td:first-child{color:var(--no);font-weight:600}
+.fila-bajo .mini > span{background:var(--no)} .fila-medio .mini > span{background:var(--star)}
+textarea:focus-visible{outline:3px solid var(--star)}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}.celda:active{transform:none}}
+@media (max-width:620px){
+  .quien small{display:none}
+  .marca span{font-size:1.15rem}
+  .tabla .nom{min-width:120px;max-width:150px}
+  .tabla th.col{width:76px;min-width:76px}
+  .kpi b{font-size:1.6rem}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ======================================================================
+   CONFIGURACIÓN
+   Mientras FIREBASE_CONFIG esté vacío, la app funciona en MODO DEMOSTRACIÓN
+   (datos ficticios guardados solo en el navegador, contraseña "demo").
+   Cuando se peguen aquí los datos del proyecto de Firebase, pasa a modo real.
+   ====================================================================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD_RvxRTlDiW6yOnpXdELIpKdCbtUkttN4",
+  authDomain: "e6-mizar.firebaseapp.com",
+  projectId: "e6-mizar",
+  storageBucket: "e6-mizar.firebasestorage.app",
+  messagingSenderId: "179165860513",
+  appId: "1:179165860513:web:ce3a1919d1dcf7ced256e0"
+};
+// Dominio interno: los usuarios entran con un nombre de usuario; nunca se usa ni se pide un correo real.
+const DOMINIO = "e6mizar.app";
+</script>
+
+<script>
+/* ============================ Constantes ============================ */
+const CURSOS = [
+  {id:'3ESO',  nombre:'3.º ESO',          corto:'3.º ESO',   v:'--c3'},
+  {id:'4ESO',  nombre:'4.º ESO',          corto:'4.º ESO',   v:'--c4'},
+  {id:'1BACH', nombre:'1.º Bachillerato', corto:'1.º Bach.', v:'--c1b'},
+  {id:'2BACH', nombre:'2.º Bachillerato', corto:'2.º Bach.', v:'--c2b'}
+];
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DEMO = !FIREBASE_CONFIG.apiKey;
+const LOGO = '<svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><path d="M13 3l2.2 7.8L23 13l-7.8 2.2L13 23l-2.2-7.8L3 13l7.8-2.2z" fill="currentColor"/><circle cx="25" cy="24.5" r="2.8" fill="currentColor"/></svg>';
+
+/* ============================ Utilidades ============================ */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const hoyMes = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth()+1); };
+const hoyISO = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); };
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const mesLargo = m => { const [y,mm] = m.split('-'); return MESES[+mm-1] + ' de ' + y; };
+const fechaCorta = f => { const [,m,d] = f.split('-'); return (+d) + '/' + (+m); };
+const fechaLarga = f => { const [y,m,d] = f.split('-'); return (+d) + ' de ' + MESES[+m-1] + ' de ' + y; };
+const mesMas = (m,dl) => { let [y,mm] = m.split('-').map(Number); mm += dl; while(mm>12){mm-=12;y++} while(mm<1){mm+=12;y--} return y + '-' + pad(mm); };
+const cursoEscolarDe = m => { const [y,mm] = m.split('-').map(Number); return mm >= 9 ? y : y-1; };
+const cursoEscolarActual = () => cursoEscolarDe(hoyMes());
+const mesesCurso = y => { const r = []; for(let i=0;i<10;i++){ const mm = (8+i)%12+1; r.push((i<4?y:y+1) + '-' + pad(mm)); } return r; };
+const isoD = d => d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+const parseD = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const addD = (s, n) => { const d = parseD(s); d.setDate(d.getDate() + n); return isoD(d); };
+const lunesDe = s => { const d = parseD(s); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return isoD(d); };
+const mesDeSemana = l => addD(l, 3).slice(0,7); // la semana cuenta en el mes de su jueves
+const semanasMes = m => { let l = lunesDe(m + '-01'); if(mesDeSemana(l) !== m) l = addD(l, 7); const r = []; while(mesDeSemana(l) === m){ r.push(l); l = addD(l, 7); } return r; };
+const semanaCorta = l => { const a = parseD(l), b = parseD(addD(l,6)); const ma = MESES[a.getMonth()].slice(0,3), mb = MESES[b.getMonth()].slice(0,3); return ma === mb ? `${a.getDate()}-${b.getDate()} ${mb}` : `${a.getDate()} ${ma}-${b.getDate()} ${mb}`; };
+const textoSemana = l => { const a = parseD(l), b = parseD(addD(l,6)); return a.getMonth() === b.getMonth() ? `Del ${a.getDate()} al ${b.getDate()} de ${MESES[b.getMonth()]}` : `Del ${a.getDate()} de ${MESES[a.getMonth()]} al ${b.getDate()} de ${MESES[b.getMonth()]}`; };
+const AGREG = {suma:'Suma de semanas asistidas', media:'Media (% de semanas)', alguna:'Al menos una vez al mes', todas:'Todas las semanas del mes'};
+const AGREG_CORTO = {suma:'Suma', media:'Media', alguna:'Al menos una', todas:'Todas'};
+const nuevoId = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4);
+const cursoNombre = id => (CURSOS.find(c=>c.id===id)||{nombre:id||'Sin curso'}).nombre;
+const cortoCurso = id => (CURSOS.find(c=>c.id===id)||{corto:id||''}).corto;
+const varCurso = id => (CURSOS.find(c=>c.id===id)||{v:'--night'}).v;
+const colorCurso = id => 'var(' + varCurso(id) + ')';
+const pct = (a,b) => b ? Math.round(a*100/b) : null;
+const pctTxt = p => p === null ? '—' : p + '%';
+
+let toastT;
+function toast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('ver'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('ver'), 2600); }
+
+function modal(titulo, cuerpo, okTxt = 'Guardar', peligro = false){
+  return new Promise(res => {
+    const d = document.createElement('dialog'); d.className = 'modal';
+    d.innerHTML = `<form method="dialog"><h3>${esc(titulo)}</h3><div class="modal-cuerpo">${cuerpo}</div>
+      <div class="modal-pie"><button class="btn sec" value="cancel" formnovalidate>Cancelar</button>
+      <button class="btn ${peligro?'peligro':''}" value="ok">${esc(okTxt)}</button></div></form>`;
+    document.body.appendChild(d);
+    const f = d.querySelector('form');
+    d.addEventListener('close', () => { const fd = d.returnValue === 'ok' ? new FormData(f) : null; d.remove(); res(fd); });
+    d.showModal();
+  });
+}
+
+/* ===================== Almacén: modo demostración ===================== */
+function rndSemilla(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const usuarioDe = n => n.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9._-]/g,'');
+const correoDe = u => String(u).trim().toLowerCase() + '@' + DOMINIO;
+function semillaDemo(){
+  const db = {usuarios:{}, chicos:{}, eventos:{}, registros:{}, config:{}, sugerencias:{}};
+  db.eventos.tutoria = {tipo:'mensual', nombre:'Tutoría', cursos:[], desde:'', hasta:'', orden:1, objetivo:100};
+  db.eventos.padres = {tipo:'mensual', nombre:'Hablado con padres', cursos:[], desde:'', hasta:'', orden:2, objetivo:50};
+  db.usuarios.u_nacho = {nombre:'Nacho', usuario:'nacho', rol:'superadmin', curso:'', activo:true};
+  db.usuarios.u_jotas = {nombre:'Jotas', usuario:'jotas', rol:'admin', curso:'', activo:true};
+  const resp = {'3ESO':['Álvaro','Diego'], '4ESO':['Pablo','Javier'], '1BACH':['Miguel','Íñigo'], '2BACH':['Andrés','Luis']};
+  const nombres = ['Carlos M.','Jaime R.','Lucas G.','Mateo F.','Hugo S.','Daniel P.','Martín L.','Leo A.','Marcos V.','Adrián T.','Bruno C.','Gonzalo D.','Íker N.','Rodrigo B.','Tomás H.','Nicolás E.','Samuel O.','Álex Q.','Enrique J.','Fernando K.','Ignacio U.','Pedro Y.','Rafael Z.','Víctor W.'];
+  let n = 0;
+  for(const c of CURSOS){
+    const rs = resp[c.id].map((nm,i) => { const id = 'u_' + c.id.toLowerCase() + i; db.usuarios[id] = {nombre:nm, usuario:usuarioDe(nm), rol:'responsable', curso:c.id, activo:true}; return id; });
+    for(let k=0;k<6;k++){ db.chicos['ch'+n] = {nombre:nombres[n], curso:c.id, responsable:rs[k%2], activo:true}; n++; }
+  }
+  const rnd = rndSemilla(11);
+  const evComunes = ['Excursión','Salida cultural','Charla','Torneo deportivo','Voluntariado','Jornada de estudio','Concierto','Visita','Olimpiada interna','Fiesta de fin de curso'];
+  const meses = mesesCurso(cursoEscolarActual()).filter(m => m <= hoyMes());
+  meses.forEach((m,i) => {
+    db.eventos['ev'+i+'a'] = {tipo:'anual', nombre:evComunes[i%10], fecha:m+'-05', cursos:[]};
+    if(i%2 === 0) db.eventos['ev'+i+'b'] = {tipo:'anual', nombre:'Salida de ' + (i%4 ? 'Bachillerato' : 'ESO'), fecha:m+'-24', cursos: i%4 ? ['1BACH','2BACH'] : ['3ESO','4ESO']};
+  });
+  const ini = cursoEscolarActual() + '-09-01';
+  db.eventos.sem1 = {tipo:'semanal', nombre:'Actividad semanal', cursos:[], agregacion:'media', desde:ini, hasta:'', objetivo:75};
+  db.eventos.sem2 = {tipo:'semanal', nombre:'Deporte', cursos:['3ESO','4ESO'], agregacion:'suma', desde:ini, hasta:'', objetivo:50};
+  const hoy = hoyISO();
+  Object.entries(db.chicos).forEach(([id,ch]) => {
+    const constancia = .45 + rnd()*.5;
+    meses.forEach(m => {
+      const marcas = {};
+      if(m !== hoyMes() || rnd() < .5){ if(rnd() < constancia + .15) marcas.a_tutoria = 'si'; }
+      if(rnd() < constancia * .8) marcas.a_padres = 'si';
+      Object.entries(db.eventos).forEach(([eid,e]) => {
+        if(e.tipo === 'mensual' || (e.cursos.length && !e.cursos.includes(ch.curso))) return;
+        if(e.tipo === 'semanal'){ semanasMes(m).forEach(l => { if(l <= hoy && rnd() < constancia) marcas[`s_${eid}_${l}`] = 'si'; }); return; }
+        if(e.fecha.slice(0,7) === m && e.fecha <= hoy && rnd() < constancia) marcas['e_'+eid] = 'si';
+      });
+      db.registros[id+'_'+m] = {chicoId:id, curso:ch.curso, mes:m, marcas};
+    });
+  });
+  return db;
+}
+function crearDemo(){
+  const KEY = 'e6mizar-demo-v4';
+  let mem = null; const escuchas = []; let authCb = null;
+  const cargar = () => { if(mem) return mem; try{ const t = localStorage.getItem(KEY); if(t) mem = JSON.parse(t); }catch(e){} if(!mem){ mem = semillaDemo(); guardar(); } return mem; };
+  const guardar = () => { try{ localStorage.setItem(KEY, JSON.stringify(mem)); }catch(e){} };
+  const consulta = (col, f) => Object.entries(cargar()[col] || {}).map(([id,v]) => ({id, ...v})).filter(x => !f || x[f[0]] === f[1]);
+  const emitir = col => escuchas.filter(l => l.col === col).forEach(l => l.cb(consulta(col, l.f)));
+  const sesion = { get(){ try{ return sessionStorage.getItem(KEY+'-u'); }catch(e){ return this.v; } }, set(v){ this.v = v; try{ v ? sessionStorage.setItem(KEY+'-u', v) : sessionStorage.removeItem(KEY+'-u'); }catch(e){} } };
+  return {
+    demo:true,
+    demoUsuarios(){ return consulta('usuarios').filter(u => u.activo !== false); },
+    async estadoArranque(){ return true; },
+    onAuth(cb){ authCb = cb; const s = sesion.get(); const u = s && cargar().usuarios[s]; setTimeout(() => cb(u ? {uid:s} : null), 0); },
+    async login(usuario, pass){
+      const e = Object.entries(cargar().usuarios).find(([,u]) => u.usuario === String(usuario).trim().toLowerCase());
+      if(!e || pass !== 'demo') throw new Error('Usuario o contraseña incorrectos. En la demostración, la contraseña es «demo».');
+      sesion.set(e[0]); authCb({uid:e[0]});
+    },
+    async logout(){ sesion.set(null); authCb(null); },
+    async cambiarPassword(){ throw new Error('En la demostración no se pueden cambiar contraseñas.'); },
+    async getProfile(id){ const u = cargar().usuarios[id]; return u ? {id, ...u} : null; },
+    async createUser({usuario, password, ...perfil}){
+      const db = cargar(); usuario = String(usuario).trim().toLowerCase();
+      if(Object.values(db.usuarios).some(u => u.usuario === usuario)) throw new Error('Ese nombre de usuario ya existe.');
+      const id = nuevoId(); db.usuarios[id] = {usuario, ...perfil}; guardar(); emitir('usuarios'); return id;
+    },
+    watch(col, f, cb){ const l = {col, f, cb}; escuchas.push(l); setTimeout(() => cb(consulta(col, f)), 0); return () => { const i = escuchas.indexOf(l); if(i >= 0) escuchas.splice(i,1); }; },
+    async set(col, id, data, merge){
+      const db = cargar(); db[col] = db[col] || {};
+      const prev = db[col][id];
+      if(merge && prev){ const n = {...prev, ...data}; if(data.marcas) n.marcas = {...(prev.marcas||{}), ...data.marcas}; db[col][id] = n; }
+      else db[col][id] = data;
+      guardar(); emitir(col);
+    },
+    async add(col, data){ const id = nuevoId(); await this.set(col, id, data, false); return id; },
+    async del(col, id){ const db = cargar(); if(db[col]) delete db[col][id]; guardar(); emitir(col); },
+    restablecer(){ mem = semillaDemo(); guardar(); ['usuarios','chicos','eventos','registros','config','sugerencias'].forEach(emitir); }
+  };
+}
+
+/* ========================= Almacén: Firebase ========================= */
+function errAuth(e){
+  const c = (e && e.code) || '';
+  if(/invalid-credential|wrong-password|user-not-found|invalid-login|invalid-email/.test(c)) return 'Usuario o contraseña incorrectos.';
+  if(/email-already-in-use/.test(c)) return 'Ese nombre de usuario ya existe.';
+  if(/weak-password/.test(c)) return 'La contraseña debe tener al menos 6 caracteres.';
+  if(/too-many-requests/.test(c)) return 'Demasiados intentos. Espera unos minutos y vuelve a probar.';
+  if(/requires-recent-login/.test(c)) return 'Por seguridad, sal y vuelve a entrar antes de cambiar la contraseña.';
+  if(/network/.test(c)) return 'Sin conexión. Comprueba internet y vuelve a probar.';
+  return 'No se pudo completar la operación (' + (c || 'error desconocido') + ').';
+}
+async function crearFirebase(){
+  const B = 'https://www.gstatic.com/firebasejs/10.12.2/';
+  const [AP, A, F] = await Promise.all([import(B+'firebase-app.js'), import(B+'firebase-auth.js'), import(B+'firebase-firestore.js')]);
+  const app = AP.initializeApp(FIREBASE_CONFIG);
+  const auth = A.getAuth(app); const db = F.getFirestore(app);
+  let secundaria = null;
+  return {
+    demo:false,
+    async estadoArranque(){ const s = await F.getDoc(F.doc(db,'config','arranque')); return s.exists(); },
+    async registrarPrincipal(usuario, pass){
+      try{ const c = await A.createUserWithEmailAndPassword(auth, correoDe(usuario), pass); return c.user.uid; }
+      catch(e){ if(/email-already-in-use/.test(e.code||'')){ try{ const c = await A.signInWithEmailAndPassword(auth, correoDe(usuario), pass); return c.user.uid; }catch(x){ throw new Error(errAuth(x)); } } throw new Error(errAuth(e)); }
+    },
+    onAuth(cb){ A.onAuthStateChanged(auth, u => cb(u ? {uid:u.uid} : null)); },
+    async login(usuario, pass){ try{ await A.signInWithEmailAndPassword(auth, correoDe(usuario), pass); }catch(e){ throw new Error(errAuth(e)); } },
+    async logout(){ await A.signOut(auth); },
+    async cambiarPassword(actual, nueva){
+      const u = auth.currentUser;
+      try{ await A.reauthenticateWithCredential(u, A.EmailAuthProvider.credential(u.email, actual)); await A.updatePassword(u, nueva); }
+      catch(e){ throw new Error(/invalid-credential|wrong-password/.test(e.code||'') ? 'La contraseña actual no es correcta.' : errAuth(e)); }
+    },
+    async getProfile(id){ const s = await F.getDoc(F.doc(db,'usuarios',id)); return s.exists() ? {id:s.id, ...s.data()} : null; },
+    async createUser({usuario, password, ...perfil}){
+      if(!secundaria) secundaria = AP.initializeApp(FIREBASE_CONFIG, 'altas');
+      const sa = A.getAuth(secundaria); let cred; usuario = String(usuario).trim().toLowerCase();
+      try{ cred = await A.createUserWithEmailAndPassword(sa, correoDe(usuario), password); }catch(e){ throw new Error(errAuth(e)); }
+      await A.signOut(sa);
+      await F.setDoc(F.doc(db,'usuarios',cred.user.uid), {usuario, ...perfil});
+      return cred.user.uid;
+    },
+    watch(col, f, cb){
+      const ref = f ? F.query(F.collection(db,col), F.where(f[0],'==',f[1])) : F.collection(db,col);
+      return F.onSnapshot(ref, s => cb(s.docs.map(d => ({id:d.id, ...d.data()}))), e => { console.error(col, e); toast('No se pudieron leer los datos. Revisa las reglas de Firebase.'); });
+    },
+    async set(col, id, data, merge){ await F.setDoc(F.doc(db,col,id), data, {merge:!!merge}); },
+    async add(col, data){ const r = await F.addDoc(F.collection(db,col), data); return r.id; },
+    async del(col, id){ await F.deleteDoc(F.doc(db,col,id)); }
+  };
+}
+
+/* ============================== Estado ============================== */
+let DB;
+const S = {user:null, profile:null, usuarios:[], chicos:[], eventos:[], registros:[], config:[], reg:{}, unsubs:[],
+  view:'seguimiento', mes:hoyMes(), curso:'todos', filtro:'mios', filtroResp:'todos', anio:cursoEscolarActual(), dashAccion:null, modo:'semana', semana:lunesDe(hoyISO()), sugerencias:[], graficos:[], dashEdit:false, infNombres:false, arrancando:false, pend:false, charts:[]};
+
+const esAdmin = () => !!S.profile && (S.profile.rol === 'admin' || S.profile.rol === 'superadmin');
+const esPrincipal = () => !!S.profile && S.profile.rol === 'superadmin';
+const TIPOS = {semanal:'Semanal (se marca cada semana)', mensual:'Mensual (se marca una vez al mes)', anual:'Anual (una vez en el curso, en una fecha)'};
+const tipoDe = e => e.tipo === 'semanal' ? 'semanal' : e.tipo === 'mensual' ? 'mensual' : 'anual';
+const esMensual = e => e.tipo === 'mensual';
+const esAnual = e => tipoDe(e) === 'anual';
+const activaMes = (e, m) => esMensual(e) && (!e.desde || e.desde.slice(0,7) <= m) && (!e.hasta || e.hasta.slice(0,7) >= m);
+const porOrden = (a,b) => (a.orden ?? 1e15) - (b.orden ?? 1e15) || (a.nombre||'').localeCompare(b.nombre||'', 'es');
+// actividades mensuales que afectan a alguno de esos cursos y están activas en alguno de esos meses
+const acciones = (cursos = CURSOS.map(c => c.id), meses = null) => S.eventos.filter(e => esMensual(e) && cursos.some(c => aplica(e, c)) && (!meses || meses.some(m => activaMes(e, m)))).sort(porOrden);
+function cuentaMensual(e, chicos, m){ if(!activaMes(e, m)) return {si:0, no:0, vacio:0, total:0}; return cuenta(chicos.filter(x => aplica(e, x.curso)), m, 'a_' + e.id); }
+const cursosSel = () => esAdmin() ? (S.curso === 'todos' ? CURSOS.map(c => c.id) : [S.curso]) : [S.profile.curso];
+const porNombre = (a,b) => (a.nombre||'').localeCompare(b.nombre||'', 'es');
+const chicosDe = c => S.chicos.filter(x => x.curso === c && x.activo !== false).sort(porNombre);
+const responsablesDe = c => S.usuarios.filter(u => u.rol === 'responsable' && u.curso === c && u.activo !== false).sort(porNombre);
+const nombreUsuario = id => (S.usuarios.find(u => u.id === id) || {}).nombre || '';
+const aplica = (ev, c) => !ev.cursos || !ev.cursos.length || ev.cursos.includes(c);
+const esSemanal = e => e.tipo === 'semanal';
+const eventosMes = (c, m) => S.eventos.filter(e => esAnual(e) && e.fecha && e.fecha.slice(0,7) === m && aplica(e,c)).sort((a,b) => a.fecha.localeCompare(b.fecha));
+const activa = (e, l) => esSemanal(e) && (!e.desde || e.desde <= addD(l,6)) && (!e.hasta || e.hasta >= l);
+const semanalesMes = (c, m) => S.eventos.filter(e => aplica(e,c) && semanasMes(m).some(l => activa(e,l))).sort(porNombre);
+const semanasComputables = (e, m) => semanasMes(m).filter(l => l <= hoyISO() && activa(e, l));
+function agregado(chicoId, e, m){
+  const ws = semanasComputables(e, m); const n = ws.length;
+  const si = ws.filter(l => valor(chicoId, m, `s_${e.id}_${l}`) === 'si').length;
+  const modo = e.agregacion || 'suma';
+  if(!n) return {txt:'—', num:null, ok:null, si, n};
+  if(modo === 'suma') return {txt:String(si), num:si, si, n};
+  if(modo === 'media'){ const p = pct(si, n); return {txt:p + '%', num:p, si, n}; }
+  const ok = modo === 'alguna' ? si > 0 : si === n;
+  return {txt:ok ? 'Sí' : 'No', num:ok ? 'Sí' : 'No', ok, si, n};
+}
+function agregadoCurso(chicos, e, m){
+  const n = semanasComputables(e, m).length; if(!n || !chicos.length) return {txt:'—', p:null};
+  const rs = chicos.map(x => agregado(x.id, e, m)); const tot = rs.reduce((s,r) => s + r.si, 0); const p = pct(tot, n * chicos.length);
+  const modo = e.agregacion || 'suma';
+  if(modo === 'suma') return {txt:String(tot), largo:`${tot} asistencias en ${n} ${n===1?'semana':'semanas'}, media de ${(tot/chicos.length).toLocaleString('es-ES',{maximumFractionDigits:1})} por chico`, p};
+  if(modo === 'media') return {txt:p + '%', largo:`${p}% de las semanas`, p};
+  const k = rs.filter(r => r.ok).length;
+  return {txt:`${k}/${chicos.length}`, largo:`${k} de ${chicos.length} chicos ${modo === 'alguna' ? 'fueron al menos una vez' : 'fueron todas las semanas'}`, p:pct(k, chicos.length)};
+}
+const valor = (chico, m, key) => (S.reg[chico+'_'+m] || {})[key] === 'si' ? 'si' : '';
+const txtValor = v => v === 'si' ? 'Sí' : v === 'no' ? 'No' : '';
+function cuenta(chicos, m, key){ let si = 0, no = 0; for(const c of chicos){ const v = valor(c.id, m, key); if(v === 'si') si++; else if(v === 'no') no++; } return {si, no, vacio:chicos.length-si-no, total:chicos.length}; }
+function asistenciaMedia(chicos, evs, m){ let si = 0, tot = 0; evs.forEach(e => { const r = cuenta(chicos, m, 'e_'+e.id); si += r.si; tot += r.total; }); return pct(si, tot); }
+function nombreResp(x){ const r = S.usuarios.find(u => u.id === x.responsable && u.activo !== false && u.rol === 'responsable' && u.curso === x.curso); return r ? r.nombre : 'Sin responsable'; }
+function grupos(c){
+  const ch = chicosDe(c); const rs = responsablesDe(c); const ids = new Set(rs.map(r => r.id));
+  const g = rs.map(r => ({nombre:r.nombre, chicos:ch.filter(x => x.responsable === r.id)}));
+  const sin = ch.filter(x => !ids.has(x.responsable)); if(sin.length) g.push({nombre:'Sin responsable', chicos:sin});
+  return g;
+}
+const rolTxt = p => p.rol === 'superadmin' ? 'Administrador principal' : p.rol === 'admin' ? 'Administrador' : 'Responsable de ' + cursoNombre(p.curso);
+const vacio = t => `<div class="vacio">${t}</div>`;
+const barraMini = (p, cls='') => `<span class="mini ${cls}"><span style="width:${p||0}%"></span></span>`;
+
+/* ============================ Arranque ============================ */
+async function arrancar(){
+  try{ DB = DEMO ? crearDemo() : await crearFirebase(); }
+  catch(e){ console.error(e); document.getElementById('app').innerHTML = `<div class="centro"><p>No se pudo cargar Firebase. Comprueba la conexión y los datos de configuración.</p></div>`; return; }
+  DB.onAuth(u => { if(!S.arrancando) procesarAuth(u); });
+}
+async function procesarAuth(u){
+  pararEscuchas(); S.user = u; S.profile = null;
+  if(!u){
+    let listo = true; try{ listo = await DB.estadoArranque(); }catch(e){ console.error(e); }
+    listo ? renderLogin() : renderArranque(); return;
+  }
+  document.getElementById('app').innerHTML = '<div class="centro"><p>Cargando…</p></div>';
+  let p = null; try{ p = await DB.getProfile(u.uid); }catch(e){ console.error(e); }
+  if(!p || p.activo === false){ renderSinAcceso('Este acceso no está activo. Pide a un administrador que te dé uno nuevo.'); return; }
+  if(p.rol === 'responsable' && !p.curso){ renderSinAcceso('Tu cuenta no tiene curso asignado. Pide a un administrador que te lo asigne.'); return; }
+  S.profile = p; iniciarEscuchas();
+}
+function pararEscuchas(){ S.unsubs.forEach(f => { try{ f(); }catch(e){} }); S.unsubs = []; }
+function iniciarEscuchas(){
+  const adm = esAdmin(); const f = adm ? null : ['curso', S.profile.curso];
+  S.curso = adm ? 'todos' : S.profile.curso; S.filtroResp = 'todos'; S.modo = 'semana'; S.semana = lunesDe(hoyISO()); S.mes = hoyMes(); S.view = 'seguimiento'; S.dashEdit = false;
+  const listo = {}; const need = ['usuarios','chicos','eventos','registros','config'];
+  if(esPrincipal()) need.push('sugerencias'); else S.sugerencias = [];
+  const on = col => docs => {
+    S[col] = docs;
+    if(col === 'registros'){ S.reg = {}; docs.forEach(r => { S.reg[r.id] = r.marcas || {}; }); }
+    if(col === 'usuarios' && revisarPerfil()) return;
+    listo[col] = true; if(need.every(k => listo[k])) render();
+  };
+  S.unsubs = [
+    DB.watch('usuarios', null, on('usuarios')),
+    DB.watch('chicos', f, on('chicos')),
+    DB.watch('eventos', null, on('eventos')),
+    DB.watch('registros', f, on('registros')),
+    DB.watch('config', null, on('config'))
+  ];
+  if(esPrincipal()) S.unsubs.push(DB.watch('sugerencias', null, on('sugerencias')));
+}
+function revisarPerfil(){
+  const me = S.usuarios.find(u => u.id === S.user.uid); if(!me) return false;
+  if(me.activo === false){ DB.logout(); return true; }
+  const cambio = me.rol !== S.profile.rol || me.curso !== S.profile.curso;
+  S.profile = me;
+  if(cambio){ pararEscuchas(); iniciarEscuchas(); return true; }
+  return false;
+}
+
+/* ============================ Pantallas sueltas ============================ */
+function renderArranque(msg = ''){
+  document.getElementById('app').innerHTML = `<div class="login"><div class="login-caja">${LOGO}<h1>E6 Mizar</h1>
+    <p class="sub">Puesta en marcha. Solo aparece esta vez: crea la cuenta del administrador principal.</p>
+    <form class="login-form" data-f="arranque">
+      <label>Nombre<input name="nombre" required maxlength="40" value="Nacho"></label>
+      <label>Usuario<input name="usuario" required maxlength="30" value="nacho" autocapitalize="none" autocomplete="username"></label>
+      <label>Contraseña<input type="password" name="pass" required minlength="6" autocomplete="new-password"></label>
+      <label>Repite la contraseña<input type="password" name="pass2" required minlength="6" autocomplete="new-password"></label>
+      <p class="error" id="login-msg" role="alert">${esc(msg)}</p>
+      <button class="btn ancho" type="submit">Guardar y empezar</button>
+    </form></div></div>`;
+}
+function renderLogin(msg = ''){
+  const orden = {superadmin:0, admin:1, responsable:2};
+  const demo = DB.demo ? `<div class="demo-accesos"><p>Modo demostración. Entra con uno de estos perfiles:</p><div>${
+    DB.demoUsuarios().sort((a,b) => orden[a.rol] - orden[b.rol] || (a.curso||'').localeCompare(b.curso||''))
+      .map(u => `<button type="button" data-a="demoEntrar" data-usuario="${esc(u.usuario)}">${esc(u.nombre)}, ${esc(u.rol==='responsable' ? cortoCurso(u.curso) : rolTxt(u).toLowerCase())}</button>`).join('')}</div></div>` : '';
+  document.getElementById('app').innerHTML = `<div class="login"><div class="login-caja">${LOGO}<h1>E6 Mizar</h1>
+    <p class="sub">Seguimiento de los chicos de 3.º ESO a 2.º Bachillerato</p>
+    <form class="login-form" data-f="login">
+      <label>Usuario<input name="usuario" required autocapitalize="none" autocomplete="username"></label>
+      <label>Contraseña<input type="password" name="pass" required autocomplete="current-password"></label>
+      <p class="error" id="login-msg" role="alert">${esc(msg)}</p>
+      <button class="btn ancho" type="submit">Entrar</button>
+      <p class="nota" style="margin:0;text-align:center">¿Has olvidado la contraseña? Pide a un administrador un acceso nuevo.</p>
+    </form>${demo}</div></div>`;
+}
+function renderSinAcceso(t){
+  document.getElementById('app').innerHTML = `<div class="login"><div class="login-caja">${LOGO}<h1>E6 Mizar</h1><div class="login-form"><p style="margin:0">${esc(t)}</p><button class="btn ancho" data-a="salir">Salir</button></div></div></div>`;
+}
+
+/* ============================ Render principal ============================ */
+function tabsDisponibles(){
+  const t = [{id:'seguimiento',nombre:'Seguimiento'},{id:'chicos',nombre:'Chicos'},{id:'resumen',nombre:'Resumen del mes'},{id:'dashboard',nombre:'Dashboard'}];
+  if(esAdmin()) t.push({id:'eventos',nombre:'Actividades'},{id:'usuarios',nombre:'Usuarios'});
+  if(esPrincipal()){ const n = S.sugerencias.filter(s => s.estado !== 'vista').length; t.push({id:'mejoras',nombre:'Mejoras' + (n ? ` (${n})` : '')}); }
+  return t;
+}
+function editando(){ const a = document.activeElement; return !!(a && a.closest && a.closest('#main form') && /INPUT|SELECT|TEXTAREA/.test(a.tagName) && a.type !== 'checkbox'); }
+function render(){
+  if(!S.profile) return;
+  if(editando()){ S.pend = true; return; }
+  S.pend = false;
+  const scrolls = {}; document.querySelectorAll('[data-scroll]').forEach(el => scrolls[el.dataset.scroll] = el.scrollLeft);
+  const ae = document.activeElement; const foco = ae && ae.dataset ? ae.dataset.foco : null;
+  const y = window.scrollY;
+  S.charts.forEach(c => { try{ c.destroy(); }catch(e){} }); S.charts = [];
+  const tabs = tabsDisponibles(); if(!tabs.some(t => t.id === S.view)) S.view = 'seguimiento';
+  document.getElementById('app').innerHTML = cabecera(tabs) + `<main id="main" class="main">${VISTAS[S.view]()}</main>`;
+  document.querySelectorAll('[data-scroll]').forEach(el => { if(scrolls[el.dataset.scroll]) el.scrollLeft = scrolls[el.dataset.scroll]; });
+  if(foco){ const el = document.querySelector(`[data-foco="${CSS.escape(foco)}"]`); if(el) el.focus({preventScroll:true}); }
+  window.scrollTo(0, y);
+  if(S.view === 'dashboard') dibujarGraficos();
+}
+function cabecera(tabs){
+  const p = S.profile;
+  return `${DB.demo ? `<div class="aviso-demo">Modo demostración: datos ficticios guardados solo en este navegador. <button class="enlace" data-a="resetDemo">Restablecer datos</button></div>` : ''}
+  <header class="cab"><div class="cab-fila"><div class="marca">${LOGO}<span>E6 Mizar</span></div>
+  <div class="quien"><button class="yo" data-a="miCuenta" title="Cambiar mi contraseña"><strong>${esc(p.nombre)}</strong><small>${esc(rolTxt(p))}</small></button><button class="btn fantasma peq" data-a="salir">Salir</button></div></div>
+  <nav class="tabs" aria-label="Secciones">${tabs.map(t => `<button class="tab ${S.view===t.id?'on':''}" data-a="vista" data-v="${t.id}" ${S.view===t.id?'aria-current="page"':''}>${t.nombre}</button>`).join('')}<button class="tab sugerir" data-a="sugerir">Sugerir mejora</button></nav></header>`;
+}
+function ctrlMes(){ return `<div class="mesnav"><button class="icono" data-a="mes" data-d="-1" aria-label="Mes anterior">‹</button><span class="mes-label">${cap(mesLargo(S.mes))}</span><button class="icono" data-a="mes" data-d="1" aria-label="Mes siguiente">›</button></div>`; }
+function ctrlCurso(){
+  if(!esAdmin()) return `<span class="chip fijo" style="--cc:${colorCurso(S.profile.curso)}">${cursoNombre(S.profile.curso)}</span>`;
+  const ops = [{id:'todos', corto:'Todos', v:'--night-2'}, ...CURSOS];
+  return `<div class="chips" role="group" aria-label="Curso">${ops.map(o => `<button class="chip ${S.curso===o.id?'on':''}" data-a="curso" data-v="${o.id}" style="--cc:var(${o.v})" aria-pressed="${S.curso===o.id}">${o.corto}</button>`).join('')}</div>`;
+}
+function cabBloque(c, extra = ''){ return `<div class="bloque-cab"><span class="punto" style="--cc:${colorCurso(c)}"></span><h2>${cursoNombre(c)}</h2>${extra}</div>`; }
+
+/* ============================ Seguimiento ============================ */
+const GRUPO_TXT = {accion:'Actividades mensuales', evento:'Actividades anuales', semanal:'Actividades semanales', agregado:'Semanales: cómputo del mes'};
+function columnasSemana(c, l){
+  const fin = addD(l, 6);
+  return [
+    ...S.eventos.filter(e => activa(e, l) && aplica(e, c)).sort(porNombre).map(e => ({key:`s_${e.id}_${l}`, nombre:e.nombre, tipo:'semanal', mes:mesDeSemana(l)})),
+    ...S.eventos.filter(e => esAnual(e) && e.fecha && e.fecha >= l && e.fecha <= fin && aplica(e, c)).sort((a,b) => a.fecha.localeCompare(b.fecha)).map(e => ({key:'e_'+e.id, nombre:e.nombre, fecha:e.fecha, tipo:'evento', mes:e.fecha.slice(0,7)}))
+  ];
+}
+function columnasMes(c, m){
+  return [
+    ...acciones([c], [m]).map(a => ({key:'a_'+a.id, nombre:a.nombre, tipo:'accion', mes:m})),
+    ...eventosMes(c, m).map(e => ({key:'e_'+e.id, nombre:e.nombre, fecha:e.fecha, tipo:'evento', mes:m})),
+    ...semanalesMes(c, m).map(e => ({key:'g_'+e.id, nombre:e.nombre, tipo:'agregado', ev:e, mes:m, sub:AGREG_CORTO[e.agregacion || 'suma']}))
+  ];
+}
+function ctrlSemana(){ return `<div class="mesnav"><button class="icono" data-a="semana" data-d="-1" aria-label="Semana anterior">‹</button><span class="mes-label">${textoSemana(S.semana)}</span><button class="icono" data-a="semana" data-d="1" aria-label="Semana siguiente">›</button></div>`; }
+function vistaSeguimiento(){
+  const cursos = cursosSel(); let filtro;
+  if(!esAdmin()){
+    filtro = `<div class="seg" role="group" aria-label="Qué chicos ver">
+      <button class="${S.filtro==='mios'?'on':''}" data-a="filtro" data-v="mios" aria-pressed="${S.filtro==='mios'}">Mis chicos</button>
+      <button class="${S.filtro==='curso'?'on':''}" data-a="filtro" data-v="curso" aria-pressed="${S.filtro==='curso'}">Todo el curso</button></div>`;
+  } else {
+    const rs = cursos.flatMap(responsablesDe);
+    filtro = `<label class="sel"><span class="vh">Responsable</span><select data-ch="filtroResp"><option value="todos">Todos los responsables</option>${
+      rs.map(r => `<option value="${r.id}" ${S.filtroResp===r.id?'selected':''}>${esc(r.nombre)} (${cortoCurso(r.curso)})</option>`).join('')}
+      <option value="sin" ${S.filtroResp==='sin'?'selected':''}>Sin responsable</option></select></label>`;
+  }
+  const modo = `<div class="seg" role="group" aria-label="Periodo">
+    <button class="${S.modo==='semana'?'on':''}" data-a="modo" data-v="semana" aria-pressed="${S.modo==='semana'}">Semana</button>
+    <button class="${S.modo==='mes'?'on':''}" data-a="modo" data-v="mes" aria-pressed="${S.modo==='mes'}">Mes</button></div>`;
+  const tablas = cursos.map(c => S.modo === 'semana' ? tablaCurso(c, columnasSemana(c, S.semana), 'semana') : tablaCurso(c, columnasMes(c, S.mes), 'mes')).filter(Boolean).join('');
+  const ayuda = S.modo === 'semana'
+    ? 'Marca la asistencia de esta semana. Toca una casilla para poner o quitar el ✓. Vacía significa que no asistió.'
+    : 'Toca una casilla para poner o quitar el ✓. Vacía significa que no se hizo. Las actividades semanales se marcan en la vista Semana; aquí ves su cómputo del mes.';
+  return `<div class="barra">${modo}${S.modo === 'semana' ? ctrlSemana() : ctrlMes()}${ctrlCurso()}${filtro}</div>
+    <p class="ayuda">${ayuda}</p>${tablas || vacio('Ningún chico coincide con este filtro.')}`;
+}
+function tablaCurso(c, cols, modo){
+  let ch = chicosDe(c);
+  const ids = new Set(responsablesDe(c).map(r => r.id));
+  if(!esAdmin() && S.filtro === 'mios') ch = ch.filter(x => x.responsable === S.profile.id);
+  if(esAdmin() && S.filtroResp !== 'todos'){
+    ch = S.filtroResp === 'sin' ? ch.filter(x => !ids.has(x.responsable)) : ch.filter(x => x.responsable === S.filtroResp);
+    if(!ch.length) return '';
+  }
+  const cab = cabBloque(c, `<span class="meta">${ch.length} ${ch.length===1?'chico':'chicos'}</span>`);
+  if(!ch.length) return `<section class="bloque">${cab}${vacio(!esAdmin() && S.filtro==='mios' ? 'Todavía no tienes chicos asignados. Asígnatelos en la pestaña Chicos o mira «Todo el curso».' : 'Este curso no tiene chicos. Añádelos en la pestaña Chicos.')}</section>`;
+  if(!cols.length) return `<section class="bloque">${cab}${vacio(modo === 'semana' ? `No hay actividades esta semana para ${cursoNombre(c)}.` : 'No hay columnas este mes.')}</section>`;
+  const gr = []; cols.forEach((col,i) => { if(!gr.length || gr[gr.length-1].tipo !== col.tipo){ gr.push({tipo:col.tipo, n:0}); col.ini = i > 0; } gr[gr.length-1].n++; });
+  const th = col => `<th scope="col" class="col ${col.tipo} ${col.ini?'ini':''}"><span class="col-nom">${esc(col.nombre)}</span>${col.fecha ? `<span class="col-fecha">${fechaCorta(col.fecha)}</span>` : col.sub ? `<span class="col-fecha">${esc(col.sub)}</span>` : ''}</th>`;
+  const celda = (x, col) => {
+    const ini = col.ini ? ' class="ini"' : '';
+    if(col.tipo === 'agregado'){ const r = agregado(x.id, col.ev, col.mes); return `<td${ini}><span class="agr" title="${r.si} de ${r.n} semanas">${r.txt}</span></td>`; }
+    const v = valor(x.id, col.mes, col.key); const est = v==='si' ? 'hecho' : 'no hecho';
+    return `<td${ini}><button class="celda ${v}" data-a="marcar" data-chico="${x.id}" data-key="${col.key}" data-mes="${col.mes}" data-foco="${x.id}|${col.key}" aria-label="${esc(x.nombre)}, ${esc(col.nombre)}: ${est}">${v==='si'?'✓':''}</button></td>`;
+  };
+  const filas = ch.map(x => `<tr><th scope="row" class="nom"><span>${esc(x.nombre)}</span><small>${esc(ids.has(x.responsable) ? nombreUsuario(x.responsable) : 'Sin responsable')}</small></th>${cols.map(col => celda(x,col)).join('')}</tr>`).join('');
+  const pie = `<tr><th scope="row" class="nom">Total</th>${cols.map(col => {
+    const ini = col.ini ? ' class="ini"' : '';
+    if(col.tipo === 'agregado') return `<td${ini}>${agregadoCurso(ch, col.ev, col.mes).txt}</td>`;
+    const r = cuenta(ch, col.mes, col.key); return `<td${ini}>${r.si}/${r.total}</td>`; }).join('')}</tr>`;
+  return `<section class="bloque">${cab}<div class="tabla-wrap" data-scroll="seg-${c}"><table class="tabla">
+    <thead><tr><th class="nom grupo" rowspan="2" scope="col">Chico</th>${gr.map((g,i) => `<th class="grupo ${g.tipo} ${i?'ini':''}" colspan="${g.n}" scope="colgroup">${GRUPO_TXT[g.tipo]}</th>`).join('')}</tr>
+    <tr>${cols.map(th).join('')}</tr></thead><tbody>${filas}</tbody><tfoot>${pie}</tfoot></table></div></section>`;
+}
+
+/* ============================ Chicos ============================ */
+function opcionesResp(c, sel){ return `<option value="">Sin responsable</option>` + responsablesDe(c).map(r => `<option value="${r.id}" ${r.id===sel?'selected':''}>${esc(r.nombre)}</option>`).join(''); }
+function vistaChicos(){
+  const cursoForm = esAdmin() ? (S.curso !== 'todos' ? S.curso : CURSOS[0].id) : S.profile.curso;
+  const form = `<form class="panel" data-f="nuevoChico"><h3>Añadir chico</h3><div class="campos">
+    <label>Nombre<input name="nombre" required maxlength="60" autocomplete="off" placeholder="Nombre e inicial del apellido"></label>
+    ${esAdmin() ? `<label>Curso<select name="curso" id="nc-curso">${CURSOS.map(c => `<option value="${c.id}" ${c.id===cursoForm?'selected':''}>${c.nombre}</option>`).join('')}</select></label>` : ''}
+    <label>Responsable<select name="responsable" id="nc-resp">${opcionesResp(cursoForm, esAdmin() ? '' : S.profile.id)}</select></label>
+    <button class="btn" type="submit">Añadir chico</button></div></form>`;
+  const lista = c => {
+    const ch = chicosDe(c); const rs = responsablesDe(c); const bajas = S.chicos.filter(x => x.curso === c && x.activo === false).sort(porNombre);
+    const reparto = rs.map(r => `${esc(r.nombre)}: ${ch.filter(x => x.responsable === r.id).length}`).join(', ');
+    const items = ch.map(x => {
+      const huerfano = x.responsable && !rs.some(r => r.id === x.responsable);
+      return `<li><span class="li-nom">${esc(x.nombre)}${huerfano ? '<small>Su responsable ya no está en este curso</small>' : ''}</span>
+        <label class="sel"><span class="vh">Responsable de ${esc(x.nombre)}</span><select data-ch="resp" data-id="${x.id}">${opcionesResp(c, huerfano ? '' : x.responsable)}</select></label>
+        <button class="btn sec peq" data-a="editarChico" data-id="${x.id}">Editar</button></li>`; }).join('');
+    return `<section class="bloque">${cabBloque(c, `<span class="meta">${ch.length} chicos${reparto ? '. ' + reparto : ''}</span>`)}
+      ${ch.length ? `<ul class="lista">${items}</ul>` : vacio('Sin chicos todavía. Añade el primero con el formulario de arriba.')}
+      ${esAdmin() && bajas.length ? `<details class="bajas"><summary>Dados de baja (${bajas.length})</summary><ul class="lista">${bajas.map(x => `<li><span class="li-nom">${esc(x.nombre)}</span><button class="btn sec peq" data-a="reactivar" data-id="${x.id}">Reactivar</button></li>`).join('')}</ul></details>` : ''}
+    </section>`;
+  };
+  return `<div class="barra">${ctrlCurso()}</div>${form}
+    <p class="ayuda">Para pasar un chico a otro responsable, cámbialo en su desplegable. El cambio es inmediato para todos.</p>
+    ${cursosSel().map(lista).join('')}`;
+}
+
+/* ============================ Resumen del mes ============================ */
+function semanalTotales(chicos, cursos, m){ let si = 0, tot = 0; cursos.forEach(c => { const cc = chicos.filter(x => x.curso === c); semanalesMes(c, m).forEach(e => { const n = semanasComputables(e, m).length; cc.forEach(x => { si += agregado(x.id, e, m).si; }); tot += n * cc.length; }); }); return pct(si, tot); }
+function vistaResumen(){
+  const cursos = cursosSel();
+  return `<div class="barra">${ctrlMes()}${ctrlCurso()}<button class="btn" data-a="excel">Descargar Excel del mes</button></div>
+    ${cursos.length > 1 ? resumenGlobal(cursos) : ''}${cursos.map(resumenCurso).join('')}`;
+}
+function resumenGlobal(cursos){
+  const acc = acciones(cursos, [S.mes]); let tCh = [];
+  const filas = cursos.map(c => { const ch = chicosDe(c); tCh = tCh.concat(ch);
+    const ps = semanalTotales(ch, [c], S.mes);
+    return `<tr><td>${cursoNombre(c)}</td><td class="n">${ch.length}</td>${acc.map(a => { const r = cuentaMensual(a, ch, S.mes); const p = pct(r.si, r.total); return `<td class="n">${pctTxt(p)}${barraMini(p)}</td>`; }).join('')}<td class="n">${pctTxt(asistenciaMedia(ch, eventosMes(c,S.mes), S.mes))}</td><td class="n">${pctTxt(ps)}${barraMini(ps)}</td></tr>`; }).join('');
+  let siE = 0, totE = 0; cursos.forEach(c => eventosMes(c, S.mes).forEach(e => { const r = cuenta(chicosDe(c), S.mes, 'e_'+e.id); siE += r.si; totE += r.total; }));
+  const tot = `<tr><th>Total</th><td class="n"><b>${tCh.length}</b></td>${acc.map(a => { const r = cuentaMensual(a, tCh, S.mes); return `<td class="n"><b>${pctTxt(pct(r.si,r.total))}</b></td>`; }).join('')}<td class="n"><b>${pctTxt(pct(siE,totE))}</b></td><td class="n"><b>${pctTxt(semanalTotales(tCh, cursos, S.mes))}</b></td></tr>`;
+  return `<section class="bloque"><div class="bloque-cab"><h2>Todos los cursos</h2><span class="meta">${cap(mesLargo(S.mes))}</span></div><div class="envoltura"><table class="datos">
+    <thead><tr><th>Curso</th><th>Chicos</th>${acc.map(a => `<th>${esc(a.nombre)}</th>`).join('')}<th>Actividades anuales</th><th>Asistencia semanal</th></tr></thead><tbody>${filas}${tot}</tbody></table></div>
+    <p class="nota">Asistencia semanal: porcentaje de semanas asistidas sobre el total de semanas transcurridas, sumando todas las actividades semanales.</p></section>`;
+}
+function resumenCurso(c){
+  const ch = chicosDe(c); const acc = acciones([c], [S.mes]); const evs = eventosMes(c, S.mes); const sems = semanalesMes(c, S.mes);
+  if(!ch.length) return `<section class="bloque">${cabBloque(c)}${vacio('Este curso no tiene chicos.')}</section>`;
+  const filasCol = columnasMes(c, S.mes).filter(k => k.tipo !== 'agregado').map(col => { const r = cuenta(ch, S.mes, col.key); const p = pct(r.si, r.total);
+    return `<tr><td>${esc(col.nombre)}${col.fecha ? ` <span class="meta">(${fechaCorta(col.fecha)})</span>` : ''}</td><td class="n">${r.si}</td><td class="n">${r.total - r.si}</td><td class="n">${pctTxt(p)}${barraMini(p)}</td></tr>`; }).join('');
+  const filasSem = sems.map(e => { const r = agregadoCurso(ch, e, S.mes);
+    return `<tr><td>${esc(e.nombre)}</td><td>${AGREG[e.agregacion || 'suma']}</td><td class="n">${semanasComputables(e, S.mes).length}</td><td>${esc(r.largo || r.txt)}${r.p !== null ? barraMini(r.p) : ''}</td></tr>`; }).join('');
+  const gs = grupos(c);
+  const filasResp = gs.map(g => `<tr><td>${esc(g.nombre)}</td><td class="n">${g.chicos.length}</td>${acc.map(a => { const r = cuentaMensual(a, g.chicos, S.mes); return `<td class="n">${r.si}/${r.total}</td>`; }).join('')}<td class="n">${pctTxt(asistenciaMedia(g.chicos, evs, S.mes))}</td>${sems.map(e => `<td class="n">${agregadoCurso(g.chicos, e, S.mes).txt}</td>`).join('')}</tr>`).join('');
+  const a0 = acc.find(a => a.id === 'tutoria') || acc.find(a => /tutor/i.test(a.nombre)) || acc[0];
+  const pend = a0 ? ch.filter(x => valor(x.id, S.mes, 'a_'+a0.id) !== 'si') : [];
+  return `<section class="bloque">${cabBloque(c, `<span class="meta">${ch.length} chicos</span>`)}
+    <div class="envoltura"><table class="datos"><thead><tr><th>Actividad</th><th>Sí</th><th>No</th><th>Porcentaje</th></tr></thead><tbody>${filasCol}</tbody></table></div>
+    ${sems.length ? `<h3 style="font-size:1rem;margin:1.1rem 0 .4rem">Actividades semanales</h3><div class="envoltura"><table class="datos"><thead><tr><th>Actividad</th><th>Cómputo</th><th>Semanas</th><th>Resultado del curso</th></tr></thead><tbody>${filasSem}</tbody></table></div>` : ''}
+    <h3 style="font-size:1rem;margin:1.1rem 0 .4rem">Por responsable</h3>
+    <div class="envoltura"><table class="datos"><thead><tr><th>Responsable</th><th>Chicos</th>${acc.map(a => `<th>${esc(a.nombre)}</th>`).join('')}<th>Actividades anuales</th>${sems.map(e => `<th>${esc(e.nombre)}</th>`).join('')}</tr></thead><tbody>${filasResp}</tbody></table></div>
+    ${a0 && pend.length ? `<div class="pendientes"><b>Sin ${esc(a0.nombre.toLowerCase())} marcada este mes (${pend.length}):</b> ${pend.map(x => esc(x.nombre)).join(', ')}</div>` : ''}
+  </section>`;
+}
+function exportarExcel(){
+  if(typeof XLSX === 'undefined'){ toast('No se pudo cargar el generador de Excel. Revisa la conexión.'); return; }
+  const cursos = cursosSel(); const acc = acciones(cursosSel(), [S.mes]); const wb = XLSX.utils.book_new(); const m = S.mes;
+  const res = [['E6 Mizar. Resumen de ' + mesLargo(m)], [], ['Curso','Chicos', ...acc.map(a => a.nombre + ' (%)'), 'Actividades anuales del mes', 'Asistencia media a actividades anuales (%)', 'Asistencia semanal (%)']];
+  cursos.forEach(c => { const ch = chicosDe(c); const evs = eventosMes(c, m);
+    res.push([cursoNombre(c), ch.length, ...acc.map(a => { const r = cuentaMensual(a, ch, m); return pct(r.si, r.total) ?? ''; }), evs.length, asistenciaMedia(ch, evs, m) ?? '', semanalTotales(ch, [c], m) ?? '']); });
+  res.push([], ['Actividades semanales'], ['Curso','Actividad','Cómputo','Semanas','Resultado']);
+  cursos.forEach(c => semanalesMes(c, m).forEach(e => { const r = agregadoCurso(chicosDe(c), e, m); res.push([cursoNombre(c), e.nombre, AGREG[e.agregacion || 'suma'], semanasComputables(e, m).length, r.largo || r.txt]); }));
+  res.push([], ['Por responsable'], ['Curso','Responsable','Chicos', ...acc.map(a => a.nombre + ' (realizadas)'), 'Asistencia media a actividades anuales (%)']);
+  cursos.forEach(c => grupos(c).forEach(g => res.push([cursoNombre(c), g.nombre, g.chicos.length, ...acc.map(a => cuentaMensual(a, g.chicos, m).si), asistenciaMedia(g.chicos, eventosMes(c,m), m) ?? ''])));
+  res.push([], ['Actividades anuales'], ['Curso','Actividad','Fecha','Asistieron','No asistieron','Asistencia (%)']);
+  cursos.forEach(c => eventosMes(c, m).forEach(e => { const r = cuenta(chicosDe(c), m, 'e_'+e.id); res.push([cursoNombre(c), e.nombre, fechaLarga(e.fecha), r.si, r.total - r.si, pct(r.si, r.total) ?? '']); }));
+  const h = XLSX.utils.aoa_to_sheet(res); h['!cols'] = [{wch:18},{wch:24},{wch:20},{wch:16},{wch:16},{wch:14},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, h, 'Resumen');
+  cursos.forEach(c => {
+    const cols = columnasMes(c, m).filter(k => k.tipo !== 'agregado');
+    semanalesMes(c, m).forEach(e => {
+      semanasMes(m).filter(l => activa(e, l)).forEach(l => cols.push({nombre:`${e.nombre} (${semanaCorta(l)})`, key:`s_${e.id}_${l}`, mes:m}));
+      cols.push({nombre:`${e.nombre}: cómputo del mes (${AGREG_CORTO[e.agregacion || 'suma'].toLowerCase()})`, agr:e});
+    });
+    const aoa = [['Chico','Responsable', ...cols.map(k => k.fecha ? `${k.nombre} (${fechaCorta(k.fecha)})` : k.nombre)]];
+    chicosDe(c).forEach(x => aoa.push([x.nombre, nombreResp(x), ...cols.map(k => k.agr ? agregado(x.id, k.agr, m).num ?? '' : txtValor(valor(x.id, k.mes, k.key)))]));
+    const hc = XLSX.utils.aoa_to_sheet(aoa); hc['!cols'] = [{wch:22},{wch:18}, ...cols.map(() => ({wch:16}))];
+    XLSX.utils.book_append_sheet(wb, hc, cursoNombre(c).replace(/[:\\/?*\[\]]/g,'').slice(0,31));
+  });
+  XLSX.writeFile(wb, `E6-Mizar-${m}.xlsx`);
+  toast('Excel descargado');
+}
+
+/* ============================ Dashboard ============================ */
+const WTIPOS = {kpi:'Indicador: real frente a objetivo', evolucion:'Evolución mensual (líneas)', cursos:'Comparativa por cursos (barras)', responsables:'Comparativa por responsables (barras)', chicos:'Ranking por chico (tabla)', anuales:'Asistencia a cada actividad anual (barras)'};
+const UNIDAD = {semanal:'semanas', mensual:'meses', anual:'asistencias posibles'};
+const cfgDash = () => S.config.find(d => d.id === 'dashboard') || {};
+function variables(){
+  const vs = S.eventos.filter(e => esMensual(e) || esSemanal(e)).sort(porOrden).map(e => ({id:e.id, nombre:e.nombre, tipo:tipoDe(e), evs:[e], objetivo:e.objetivo ?? null}));
+  if(S.eventos.some(esAnual)) vs.push({id:'__anuales', nombre:'Actividades anuales (todas)', tipo:'anual', evs:S.eventos.filter(esAnual), objetivo:cfgDash().objAnuales ?? null});
+  return vs;
+}
+function tasaEv(e, chicos, meses){
+  const cc = chicos.filter(x => aplica(e, x.curso)); const t = tipoDe(e); let si = 0, tot = 0;
+  meses.filter(m => m <= hoyMes()).forEach(m => {
+    if(t === 'semanal'){ const n = semanasComputables(e, m).length; tot += n * cc.length; if(n) cc.forEach(x => si += agregado(x.id, e, m).si); }
+    else if(t === 'mensual'){ if(activaMes(e, m)){ tot += cc.length; cc.forEach(x => { if(valor(x.id, m, 'a_'+e.id) === 'si') si++; }); } }
+    else if(e.fecha && e.fecha.slice(0,7) === m && e.fecha <= hoyISO()){ tot += cc.length; cc.forEach(x => { if(valor(x.id, m, 'e_'+e.id) === 'si') si++; }); }
+  });
+  return {si, tot};
+}
+function tasa(v, chicos, meses){ let si = 0, tot = 0; v.evs.forEach(e => { const r = tasaEv(e, chicos, meses); si += r.si; tot += r.tot; }); return {si, tot, p:pct(si, tot)}; }
+function estado(p, obj){ if(p === null || obj === null || obj === undefined || obj === '') return 'neutro'; if(p >= obj) return 'ok'; if(p >= obj * .8) return 'medio'; return 'bajo'; }
+const ESTADO_TXT = {ok:'Cumple el objetivo', medio:'Cerca del objetivo', bajo:'Por debajo del objetivo', neutro:'Sin objetivo definido'};
+function widgetsActuales(){
+  const c = cfgDash(); if(Array.isArray(c.widgets)) return c.widgets;
+  const vs = variables(); const w = vs.map(v => ({id:'k_'+v.id, tipo:'kpi', variable:v.id}));
+  if(vs[0]){ w.push({id:'e_'+vs[0].id, tipo:'evolucion', variable:vs[0].id}); w.push({id:'c_'+vs[0].id, tipo:'chicos', variable:vs[0].id}); }
+  if(S.eventos.some(esAnual)) w.push({id:'anu', tipo:'anuales'});
+  return w;
+}
+function aniosDisponibles(){ const s = new Set([cursoEscolarActual()]); S.registros.forEach(r => r.mes && s.add(cursoEscolarDe(r.mes))); S.eventos.forEach(e => e.fecha && s.add(cursoEscolarDe(e.fecha.slice(0,7)))); return [...s].sort((a,b) => b-a); }
+function eventosAnio(cursos, y){ const ms = new Set(mesesCurso(y)); return S.eventos.filter(e => esAnual(e) && e.fecha && ms.has(e.fecha.slice(0,7)) && cursos.some(c => aplica(e,c))).sort((a,b) => a.fecha.localeCompare(b.fecha)); }
+const colorEstado = (v, est, base) => ({ok:v('--ok'), medio:v('--star'), bajo:v('--no')})[est] || base;
+function lineaObjetivo(obj, n, v){ return obj === null || obj === undefined ? [] : [{type:'line', label:'Objetivo', data:Array(n).fill(obj), borderColor:v('--muted'), borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false}]; }
+
+function vistaDashboard(){
+  const cursos = cursosSel(); const meses = mesesCurso(S.anio); const vs = variables();
+  const anios = aniosDisponibles();
+  const ctrl = `<label class="sel"><span class="vh">Curso escolar</span><select data-ch="anio">${anios.map(y => `<option value="${y}" ${y===S.anio?'selected':''}>Curso ${y}-${String(y+1).slice(2)}</option>`).join('')}</select></label>`;
+  S.graficos = [];
+  const ws = widgetsActuales();
+  const cuerpo = ws.length ? ws.map((w,i) => widget(w, i, ws.length, cursos, meses, vs)).join('') : vacio(esAdmin() ? 'El dashboard está vacío. Pulsa «Configurar dashboard» para añadir gráficos.' : 'El administrador todavía no ha configurado el dashboard.');
+  return `<div class="barra">${ctrl}${ctrlCurso()}${esAdmin() ? `<button class="btn ${S.dashEdit ? '' : 'sec'}" data-a="dashEditar">${S.dashEdit ? 'Terminar configuración' : 'Configurar dashboard'}</button>` : ''}</div>
+    ${S.dashEdit && esAdmin() ? panelDash(vs) : ''}
+    <p class="ayuda">Datos acumulados del curso escolar hasta hoy. Verde: cumple el objetivo. Ámbar: a menos de un 20 % de él. Rojo: por debajo.</p>
+    <div class="dash">${cuerpo}</div>`;
+}
+function panelDash(vs){
+  const opsVar = vs.map(v => `<option value="${v.id}">${esc(v.nombre)} (${v.tipo})</option>`).join('');
+  return `<form class="panel" data-f="nuevoWidget"><h3>Añadir un gráfico</h3><div class="campos">
+      <label>Tipo<select name="tipo" id="nw-tipo">${Object.entries(WTIPOS).map(([k,t]) => `<option value="${k}">${t}</option>`).join('')}</select></label>
+      <label id="nw-var">Actividad<select name="variable">${opsVar}</select></label>
+      <label>Título (opcional)<input name="titulo" maxlength="60" autocomplete="off"></label>
+      <button class="btn" type="submit">Añadir gráfico</button></div></form>
+    <form class="panel" data-f="objetivos"><h3>Asistencia óptima de cada actividad</h3>
+      <p class="nota" style="margin:0 0 .6rem">Indica el porcentaje que consideras óptimo. Semanal: 100 % es todas las semanas y 75 % es 3 de cada 4. Mensual: 100 % es todos los meses. Anual: porcentaje de chicos que deberían asistir. Déjalo vacío si no quieres objetivo.</p>
+      ${vs.length ? `<div class="envoltura"><table class="datos"><thead><tr><th>Actividad</th><th>Tipología</th><th>Óptimo (%)</th></tr></thead><tbody>${vs.map(v => `<tr><td>${esc(v.nombre)}</td><td>${cap(v.tipo)}</td><td><input type="number" name="obj_${v.id}" min="0" max="100" step="1" value="${v.objetivo ?? ''}" style="width:6rem" aria-label="Óptimo de ${esc(v.nombre)}"></td></tr>`).join('')}</tbody></table></div>
+      <button class="btn" type="submit" style="margin-top:.7rem">Guardar objetivos</button>` : vacio('Crea primero actividades en la pestaña Actividades.')}</form>`;
+}
+function widget(w, i, n, cursos, meses, vs){
+  const v = vs.find(x => x.id === w.variable);
+  const titulo = esc(w.titulo || (w.tipo === 'anuales' ? 'Actividades anuales' : (v ? v.nombre : 'Actividad eliminada')) + (w.titulo || w.tipo === 'anuales' || w.tipo === 'kpi' ? '' : ': ' + WTIPOS[w.tipo].split(' (')[0].toLowerCase()));
+  const ctrls = S.dashEdit && esAdmin() ? `<span class="w-ctrl"><button class="icono" data-a="wMover" data-i="${i}" data-d="-1" ${i===0?'disabled':''} aria-label="Subir">↑</button><button class="icono" data-a="wMover" data-i="${i}" data-d="1" ${i===n-1?'disabled':''} aria-label="Bajar">↓</button><button class="btn sec peq" data-a="wQuitar" data-i="${i}">Quitar</button></span>` : '';
+  const cab = `<div class="bloque-cab"><h2>${titulo}</h2>${ctrls}</div>`;
+  if(w.tipo !== 'anuales' && !v) return `<section class="bloque w">${cab}${vacio('La actividad de este gráfico ya no existe.')}</section>`;
+  const ch = cursos.flatMap(chicosDe); const id = 'g' + i;
+  if(w.tipo === 'kpi'){
+    const r = tasa(v, ch, meses); const est = estado(r.p, v.objetivo);
+    return `<section class="bloque w w-kpi est-${est}">${cab}<b class="kpi-n">${pctTxt(r.p)}</b>
+      <div class="obj"><span style="width:${r.p || 0}%"></span>${v.objetivo !== null ? `<i style="left:${v.objetivo}%"></i>` : ''}</div>
+      <p class="nota">${v.objetivo !== null ? `Óptimo ${v.objetivo} %. ` : ''}${ESTADO_TXT[est]}. ${r.si} de ${r.tot} ${UNIDAD[v.tipo]}, sumando todos los chicos.</p></section>`;
+  }
+  if(w.tipo === 'chicos'){
+    const filas = ch.map(x => { const r = tasa(v, [x], meses); return {x, r, est:estado(r.p, v.objetivo)}; }).filter(f => f.r.tot).sort((a,b) => a.r.p - b.r.p || porNombre(a.x, b.x));
+    return `<section class="bloque w w-ancho">${cab}${filas.length ? `<div class="envoltura"><table class="datos"><thead><tr><th>Chico</th>${cursos.length > 1 ? '<th>Curso</th>' : ''}<th>Responsable</th><th>Real</th></tr></thead><tbody>${
+      filas.map(f => `<tr class="fila-${f.est}"><td>${esc(f.x.nombre)}</td>${cursos.length > 1 ? `<td>${cortoCurso(f.x.curso)}</td>` : ''}<td>${esc(nombreResp(f.x))}</td><td class="n">${f.r.si}/${f.r.tot} ${pctTxt(f.r.p)}${barraMini(f.r.p)}</td></tr>`).join('')}</tbody></table></div>` : vacio('Todavía no hay datos.')}
+      <p class="nota">${v.objetivo !== null ? `Óptimo ${v.objetivo} %. ` : ''}Ordenado de menos a más.</p></section>`;
+  }
+  if(w.tipo === 'evolucion'){
+    const labels = meses.map(m => cap(MESES[+m.slice(5)-1].slice(0,3)));
+    S.graficos.push({id, build:vv => ({type:'line', data:{labels, datasets:[
+      ...cursos.filter(c => v.evs.some(e => aplica(e,c))).map(c => ({label:cortoCurso(c), data:meses.map(m => m > hoyMes() ? null : tasa(v, chicosDe(c), [m]).p), borderColor:vv(varCurso(c)), backgroundColor:vv(varCurso(c)), tension:.3, pointRadius:3, borderWidth:2.5})),
+      ...lineaObjetivo(v.objetivo, meses.length, vv)]}, options:{responsive:true, maintainAspectRatio:false, scales:{y:{min:0, max:100, ticks:{callback:x => x + '%'}}}, plugins:{legend:{position:'bottom'}}}})});
+    return `<section class="bloque w">${cab}<div class="grafico"><canvas id="${id}"></canvas></div></section>`;
+  }
+  if(w.tipo === 'cursos' || w.tipo === 'responsables'){
+    let etiquetas, datos;
+    if(w.tipo === 'cursos'){ const cs = cursos.filter(c => v.evs.some(e => aplica(e,c))); etiquetas = cs.map(cortoCurso); datos = cs.map(c => tasa(v, chicosDe(c), meses).p); }
+    else { const gs = cursos.flatMap(c => grupos(c).map(g => ({...g, c}))); etiquetas = gs.map(g => g.nombre + (cursos.length > 1 ? ` (${cortoCurso(g.c)})` : '')); datos = gs.map(g => tasa(v, g.chicos, meses).p); }
+    S.graficos.push({id, build:vv => ({type:'bar', data:{labels:etiquetas, datasets:[{label:'Real', data:datos, backgroundColor:datos.map(p => colorEstado(vv, estado(p, v.objetivo), vv('--night-2'))), borderRadius:5, maxBarThickness:46}, ...lineaObjetivo(v.objetivo, etiquetas.length, vv)]},
+      options:{responsive:true, maintainAspectRatio:false, scales:{y:{min:0, max:100, ticks:{callback:x => x + '%'}}}, plugins:{legend:{display:false}}}})});
+    return `<section class="bloque w">${cab}<div class="grafico"><canvas id="${id}"></canvas></div>${v.objetivo !== null ? `<p class="nota">Línea discontinua: óptimo del ${v.objetivo} %.</p>` : ''}</section>`;
+  }
+  if(w.tipo === 'anuales'){
+    const evs = eventosAnio(cursos, S.anio).filter(e => e.fecha <= hoyISO()); const obj = cfgDash().objAnuales ?? null;
+    if(!evs.length) return `<section class="bloque w">${cab}${vacio('Aún no se ha celebrado ninguna actividad anual en este curso escolar.')}</section>`;
+    const datos = evs.map(e => { const r = tasaEv(e, ch, [e.fecha.slice(0,7)]); return pct(r.si, r.tot); });
+    S.graficos.push({id, build:vv => ({type:'bar', data:{labels:evs.map(e => `${e.nombre.length > 24 ? e.nombre.slice(0,23) + '…' : e.nombre} (${fechaCorta(e.fecha)})`), datasets:[{label:'Asistencia', data:datos, backgroundColor:datos.map(p => colorEstado(vv, estado(p, obj), vv('--star'))), borderRadius:5, maxBarThickness:22}]},
+      options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{x:{min:0, max:100, ticks:{callback:x => x + '%'}}}, plugins:{legend:{display:false}}}})});
+    return `<section class="bloque w">${cab}<div class="grafico" style="height:${Math.max(220, evs.length * 30 + 60)}px"><canvas id="${id}"></canvas></div></section>`;
+  }
+  return '';
+}
+function dibujarGraficos(){
+  if(typeof Chart === 'undefined'){ document.querySelectorAll('.grafico').forEach(g => g.innerHTML = '<p class="nota">No se pudo cargar la librería de gráficos.</p>'); return; }
+  const css = getComputedStyle(document.documentElement); const v = n => css.getPropertyValue(n).trim();
+  Chart.defaults.color = v('--muted'); Chart.defaults.borderColor = v('--line'); Chart.defaults.font.family = 'Figtree, system-ui, sans-serif';
+  (S.graficos || []).forEach(g => { const el = document.getElementById(g.id); if(el) S.charts.push(new Chart(el, g.build(v))); });
+}
+async function guardarWidgets(ws){ return guardar(() => DB.set('config', 'dashboard', {widgets:ws}, true)); }
+
+/* ============================ Mejoras (administrador principal) ============================ */
+function abrirSugerencia(){
+  return modal('Sugerir una mejora', `<p>Cuéntale al administrador qué te falta o qué te resulta incómodo. No escribas datos personales de los chicos.</p><label>Tu sugerencia<textarea name="texto" required maxlength="600" rows="5" style="font:inherit;border:1px solid var(--line);border-radius:9px;padding:.5rem;background:var(--surface);color:var(--ink)"></textarea></label>`, 'Enviar sugerencia')
+    .then(fd => { if(!fd) return; const texto = String(fd.get('texto')).trim(); if(!texto) return;
+      guardar(() => DB.add('sugerencias', {texto, autor:S.profile.id, nombre:S.profile.nombre, rol:S.profile.rol, curso:S.profile.curso || '', pestana:S.view, fecha:new Date().toISOString(), estado:'nueva'}), 'Sugerencia enviada. Gracias.'); });
+}
+function informe(conNombres){
+  const vs = variables(); const nom = (v,i) => conNombres ? v.nombre : `Actividad ${i+1}`;
+  const meses = mesesCurso(cursoEscolarActual()); const sg = [...S.sugerencias].sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+  const L = [`Informe de uso de la app E6 Mizar (${fechaLarga(hoyISO())}). Propón mejoras a partir de esto y prepárame el index.html actualizado, manteniendo todo lo anterior.`, '',
+    `Usuarios activos: ${S.usuarios.filter(u => u.activo !== false && u.rol === 'responsable').length} responsables y ${S.usuarios.filter(u => u.activo !== false && u.rol !== 'responsable').length} administradores.`,
+    `Chicos por curso: ${CURSOS.map(c => `${c.nombre} ${chicosDe(c.id).length}`).join(', ')}.`, '', 'Actividades (tipología, cómputo, óptimo y asistencia real del curso escolar hasta hoy):'];
+  vs.forEach((v,i) => { const r = tasa(v, CURSOS.flatMap(c => chicosDe(c.id)), meses); const e = v.evs[0];
+    L.push(`- ${nom(v,i)}: ${v.tipo}${v.tipo === 'semanal' ? ', cómputo ' + AGREG_CORTO[e.agregacion || 'suma'].toLowerCase() : ''}, óptimo ${v.objetivo ?? 'sin definir'}${v.objetivo !== null ? ' %' : ''}, real ${pctTxt(r.p)}; por curso: ${CURSOS.filter(c => v.evs.some(x => aplica(x,c.id))).map(c => `${c.corto} ${pctTxt(tasa(v, chicosDe(c.id), meses).p)}`).join(', ')}.`); });
+  L.push('', `Gráficos del dashboard: ${widgetsActuales().map(w => WTIPOS[w.tipo].split(' (')[0]).join('; ') || 'ninguno'}.`, '', `Sugerencias de los usuarios (${sg.length}):`);
+  sg.forEach(x => L.push(`- [${(x.fecha||'').slice(0,10)}, ${x.rol === 'responsable' ? 'responsable de ' + cortoCurso(x.curso) : rolTxt(x).toLowerCase()}, en la pestaña ${x.pestana}] ${x.texto}`));
+  if(!sg.length) L.push('- Ninguna todavía.');
+  return L.join('\n');
+}
+function vistaMejoras(){
+  const sg = [...S.sugerencias].sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+  return `<section class="panel"><h3>Informe para Claude</h3>
+    <p class="nota" style="margin:0 0 .6rem">Copia este texto y pégamelo en el chat para actualizar la app. Revísalo antes: puedes editarlo aquí mismo. No incluye nombres de chicos.</p>
+    <label class="check" style="margin-bottom:.6rem"><input type="checkbox" data-ch="infNombres" ${S.infNombres ? 'checked' : ''}> Incluir los nombres de las actividades</label>
+    <textarea id="informe" rows="12" style="width:100%;font:inherit;font-size:.9rem;border:1px solid var(--line);border-radius:9px;padding:.6rem;background:var(--surface-2);color:var(--ink)">${esc(informe(S.infNombres))}</textarea>
+    <button class="btn" data-a="copiarInforme" style="margin-top:.6rem">Copiar informe</button></section>
+    <h2 class="seccion">Sugerencias recibidas</h2>
+    ${sg.length ? `<section class="bloque"><ul class="lista">${sg.map(x => `<li><span class="li-nom" style="font-weight:${x.estado === 'vista' ? 400 : 600}">${esc(x.texto)}<small>${esc(x.nombre || '')}, ${x.rol === 'responsable' ? 'responsable de ' + cortoCurso(x.curso) : rolTxt(x).toLowerCase()}. ${x.fecha ? fechaLarga(x.fecha.slice(0,10)) : ''}. Pestaña ${esc(x.pestana || '')}</small></span>${x.estado !== 'vista' ? `<button class="btn sec peq" data-a="sgVista" data-id="${x.id}">Marcar como vista</button>` : ''}<button class="btn sec peq" data-a="sgBorrar" data-id="${x.id}">Eliminar</button></li>`).join('')}</ul></section>` : vacio('Todavía no hay sugerencias. Cualquier usuario puede enviarlas con el botón «Sugerir mejora».')}`;
+}
+
+/* ============================ Eventos (admin) ============================ */
+function textoCursos(e){ return (!e.cursos || !e.cursos.length || e.cursos.length === CURSOS.length) ? 'Todos los cursos' : e.cursos.map(cortoCurso).join(', '); }
+function checksCursos(sel){ return CURSOS.map(c => `<label class="check"><input type="checkbox" name="cursos" value="${c.id}" ${!sel || !sel.length || sel.includes(c.id) ? 'checked' : ''}> ${c.nombre}</label>`).join(''); }
+function textoRango(e){ return (e.desde ? 'Desde el ' + fechaLarga(e.desde) : 'Desde el inicio') + (e.hasta ? ' hasta el ' + fechaLarga(e.hasta) : ''); }
+function camposEvento(e){
+  const tipo = e ? tipoDe(e) : 'semanal'; const pr = e ? 'ed' : 'ne';
+  const ver = (...ts) => ts.includes(tipo) ? '' : 'style="display:none"';
+  return `${e ? '' : `<label>Tipología<select name="tipo" id="ne-tipo">${Object.entries(TIPOS).map(([k,t]) => `<option value="${k}">${t}</option>`).join('')}</select></label>`}
+    <div class="campos">
+      <label>Nombre<input name="nombre" required maxlength="60" autocomplete="off" value="${esc(e ? e.nombre : '')}" placeholder="Por ejemplo, Tutoría o Deporte"></label>
+      <label class="${pr}-t ${pr}-anual" ${ver('anual')}>Fecha<input type="date" name="fecha" value="${esc(e && e.fecha ? e.fecha : hoyISO())}"></label>
+      <label class="${pr}-t ${pr}-semanal" ${ver('semanal')}>Cómputo mensual<select name="agregacion">${Object.entries(AGREG).map(([k,t]) => `<option value="${k}" ${e && e.agregacion === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+    </div>
+    <div class="campos ${pr}-t ${pr}-semanal ${pr}-mensual" ${ver('semanal','mensual')}>
+      <label>Desde (opcional)<input type="date" name="desde" value="${esc(e && e.desde ? e.desde : '')}"></label>
+      <label>Hasta (opcional)<input type="date" name="hasta" value="${esc(e && e.hasta ? e.hasta : '')}"></label>
+    </div>
+    <p class="nota ${pr}-t ${pr}-semanal" ${ver('semanal')}>Se marca cada semana en la vista Semana. Suma: número de semanas que asistió. Media: porcentaje de semanas. Al menos una vez y Todas las semanas dan Sí o No. Una semana cuenta en el mes en que cae su jueves.</p>
+    <p class="nota ${pr}-t ${pr}-mensual" ${ver('mensual')}>Se marca una vez al mes en la vista Mes, como la tutoría.</p>
+    <p class="nota ${pr}-t ${pr}-anual" ${ver('anual')}>Se marca una sola vez, en la semana y el mes de su fecha.</p>
+    <fieldset><legend>Para qué cursos</legend><div class="cursos-check">${checksCursos(e ? e.cursos : null)}</div></fieldset>`;
+}
+function datosEvento(fd, tipo){
+  const cursos = fd.getAll('cursos'); if(!cursos.length) return 'Elige al menos un curso.';
+  const base = {nombre:String(fd.get('nombre')).trim(), cursos:cursos.length === CURSOS.length ? [] : cursos, tipo};
+  if(!base.nombre) return 'Escribe el nombre.';
+  if(tipo === 'anual'){ if(!fd.get('fecha')) return 'Elige la fecha de la actividad.'; return {...base, fecha:fd.get('fecha')}; }
+  const desde = fd.get('desde') || '', hasta = fd.get('hasta') || '';
+  if(hasta && desde && hasta < desde) return 'La fecha «Hasta» no puede ser anterior a «Desde».';
+  return tipo === 'semanal' ? {...base, agregacion:fd.get('agregacion') || 'suma', desde, hasta} : {...base, desde, hasta};
+}
+function itemEvento(e, detalle){ return `<li><span class="li-nom">${esc(e.nombre)}<small>${detalle.replace(/\.\./g, '.')}</small></span><button class="btn sec peq" data-a="editarEvento" data-id="${e.id}">Editar</button><button class="btn sec peq" data-a="borrarEvento" data-id="${e.id}">Eliminar</button></li>`; }
+function vistaEventos(){
+  const form = `<form class="panel" data-f="nuevoEvento"><h3>Nueva actividad</h3>${camposEvento(null)}<button class="btn" type="submit">Crear actividad</button></form>`;
+  const men = S.eventos.filter(esMensual).sort(porOrden);
+  const sem = S.eventos.filter(esSemanal).sort(porNombre);
+  const anu = S.eventos.filter(e => esAnual(e) && e.fecha).sort((a,b) => b.fecha.localeCompare(a.fecha));
+  const porMes = {}; anu.forEach(e => (porMes[e.fecha.slice(0,7)] = porMes[e.fecha.slice(0,7)] || []).push(e));
+  return `${form}
+    <h2 class="seccion">Actividades mensuales</h2>${men.length ? `<section class="bloque"><ul class="lista">${men.map(e => itemEvento(e, `${textoCursos(e)}. ${textoRango(e)}`)).join('')}</ul></section>` : vacio('No hay actividades mensuales. Crea una eligiendo la tipología «Mensual».')}
+    <h2 class="seccion">Actividades semanales</h2>${sem.length ? `<section class="bloque"><ul class="lista">${sem.map(e => itemEvento(e, `${AGREG[e.agregacion || 'suma']}. ${textoCursos(e)}. ${textoRango(e)}`)).join('')}</ul></section>` : vacio('No hay actividades semanales. Crea una eligiendo la tipología «Semanal».')}
+    <h2 class="seccion">Actividades anuales</h2>${Object.keys(porMes).length ? Object.entries(porMes).map(([m, es]) => `<section class="bloque"><div class="bloque-cab"><h2>${cap(mesLargo(m))}</h2><span class="meta">${es.length} ${es.length===1?'actividad':'actividades'}</span></div><ul class="lista">${es.map(e => itemEvento(e, `${fechaLarga(e.fecha)}. ${textoCursos(e)}`)).join('')}</ul></section>`).join('') : vacio('No hay actividades anuales. Crea una eligiendo la tipología «Anual».')}`;
+}
+
+/* ============================ Usuarios (admin) ============================ */
+function puedeEditarUsuario(u){ if(u.id === S.profile.id) return false; if(esPrincipal()) return true; return esAdmin() && u.rol === 'responsable'; }
+function vistaUsuarios(){
+  const sup = esPrincipal();
+  const form = `<form class="panel" data-f="nuevoUsuario"><h3>Dar de alta un usuario</h3><div class="campos">
+    <label>Nombre<input name="nombre" required maxlength="40" autocomplete="off"></label>
+    <label>Usuario<input name="usuario" required maxlength="30" autocapitalize="none" autocomplete="off" placeholder="Por ejemplo, pablo"></label>
+    <label>Contraseña inicial<input type="text" name="password" required minlength="6" autocomplete="off" placeholder="Mínimo 6 caracteres"></label>
+    <label>Rol<select name="rol" id="nu-rol"><option value="responsable">Responsable</option>${sup ? '<option value="admin">Administrador</option>' : ''}</select></label>
+    <label id="nu-curso-l">Curso<select name="curso">${CURSOS.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('')}</select></label>
+    <button class="btn" type="submit">Dar de alta</button></div>
+    <p class="nota">El usuario solo admite letras sin tilde, números, punto y guion. Comparte con la persona su usuario y su contraseña inicial; podrá cambiarla pulsando su nombre, arriba. Si alguien olvida la contraseña, pulsa «Nuevo acceso»: se crea otro usuario con el mismo perfil y sus chicos pasan a él.</p></form>`;
+  const fila = u => {
+    const n = S.chicos.filter(x => x.responsable === u.id && x.activo !== false).length; const edit = puedeEditarUsuario(u);
+    return `<li><span class="li-nom">${esc(u.nombre)}${u.activo === false ? ' <span class="estado-off">Desactivado</span>' : ''}<small>Usuario: ${esc(u.usuario || '')}${u.rol === 'responsable' ? `. ${n} ${n===1?'chico':'chicos'}` : `. ${rolTxt(u)}`}</small></span>
+      ${edit && u.rol === 'responsable' && u.activo !== false ? `<label class="sel"><span class="vh">Curso de ${esc(u.nombre)}</span><select data-ch="ucurso" data-id="${u.id}">${CURSOS.map(c => `<option value="${c.id}" ${c.id===u.curso?'selected':''}>${c.corto}</option>`).join('')}</select></label>` : ''}
+      ${edit && u.activo !== false ? `<button class="btn sec peq" data-a="uNuevoAcceso" data-id="${u.id}">Nuevo acceso</button>` : ''}
+      ${edit ? `<button class="btn sec peq" data-a="uActivo" data-id="${u.id}">${u.activo === false ? 'Activar' : 'Desactivar'}</button>` : ''}</li>`;
+  };
+  const admins = S.usuarios.filter(u => u.rol !== 'responsable').sort((a,b) => (a.rol === 'superadmin' ? -1 : b.rol === 'superadmin' ? 1 : porNombre(a,b)));
+  return `${form}<section class="bloque"><div class="bloque-cab"><h2>Administración</h2></div><ul class="lista">${admins.map(fila).join('')}</ul></section>
+    ${CURSOS.map(c => { const rs = S.usuarios.filter(u => u.rol === 'responsable' && u.curso === c.id).sort((a,b) => (a.activo === false) - (b.activo === false) || porNombre(a,b));
+      return `<section class="bloque">${cabBloque(c.id, `<span class="meta">${rs.filter(r => r.activo !== false).length} responsables</span>`)}${rs.length ? `<ul class="lista">${rs.map(fila).join('')}</ul>` : vacio('Sin responsables. Dalos de alta con el formulario de arriba.')}</section>`; }).join('')}`;
+}
+
+const VISTAS = {seguimiento:vistaSeguimiento, chicos:vistaChicos, resumen:vistaResumen, dashboard:vistaDashboard, eventos:vistaEventos, usuarios:vistaUsuarios, mejoras:vistaMejoras};
+
+/* ============================ Acciones ============================ */
+async function guardar(fn, ok){ try{ await fn(); if(ok) toast(ok); return true; }catch(e){ console.error(e); toast(e && e.message && !/permission/i.test(e.message) ? e.message : 'No se pudo guardar. Comprueba la conexión o tus permisos.'); return false; } }
+function finForm(f){ f.reset(); if(document.activeElement) document.activeElement.blur(); render(); }
+
+const CLICK = {
+  vista(b){ S.view = b.dataset.v; render(); window.scrollTo(0,0); },
+  mes(b){ S.mes = mesMas(S.mes, +b.dataset.d); render(); },
+  semana(b){ S.semana = addD(S.semana, 7 * +b.dataset.d); render(); },
+  modo(b){
+    S.modo = b.dataset.v;
+    if(S.modo === 'mes') S.mes = mesDeSemana(S.semana);
+    else if(mesDeSemana(S.semana) !== S.mes){ const act = lunesDe(hoyISO()); S.semana = mesDeSemana(act) === S.mes ? act : semanasMes(S.mes)[0]; }
+    render();
+  },
+  curso(b){ S.curso = b.dataset.v; S.filtroResp = 'todos'; render(); },
+  filtro(b){ S.filtro = b.dataset.v; render(); },
+  salir(){ DB.logout(); },
+  resetDemo(){ if(DB.restablecer){ DB.restablecer(); toast('Datos de demostración restablecidos'); } },
+  excel(){ exportarExcel(); },
+  async marcar(b){
+    const chico = b.dataset.chico, key = b.dataset.key; const c = S.chicos.find(x => x.id === chico); if(!c) return;
+    const mes = b.dataset.mes || S.mes; const id = chico + '_' + mes; const act = (S.reg[id] || {})[key] || '';
+    const sig = act === 'si' ? '' : 'si';
+    await guardar(() => DB.set('registros', id, {chicoId:chico, curso:c.curso, mes, marcas:{[key]:sig}}, true));
+  },
+  async editarChico(b){
+    const x = S.chicos.find(c => c.id === b.dataset.id); if(!x) return;
+    const cuerpo = `<label>Nombre<input name="nombre" required maxlength="60" value="${esc(x.nombre)}"></label>${esAdmin() ? `
+      <label>Curso<select name="curso">${CURSOS.map(c => `<option value="${c.id}" ${c.id===x.curso?'selected':''}>${c.nombre}</option>`).join('')}</select></label>
+      <p>Si le cambias de curso, queda sin responsable hasta que le asignes uno nuevo.</p>
+      <label class="check"><input type="checkbox" name="baja"> Dar de baja (deja de aparecer en tablas y resúmenes)</label>` : ''}`;
+    const fd = await modal('Editar chico', cuerpo, 'Guardar cambios'); if(!fd) return;
+    const datos = {nombre:String(fd.get('nombre')).trim() || x.nombre};
+    if(esAdmin()){ datos.curso = fd.get('curso'); if(datos.curso !== x.curso) datos.responsable = ''; if(fd.get('baja')) datos.activo = false; }
+    guardar(() => DB.set('chicos', x.id, datos, true), datos.activo === false ? `${datos.nombre} dado de baja` : 'Cambios guardados');
+  },
+  reactivar(b){ guardar(() => DB.set('chicos', b.dataset.id, {activo:true}, true), 'Chico reactivado'); },
+  async editarEvento(b){
+    const e = S.eventos.find(x => x.id === b.dataset.id); if(!e) return; const t = tipoDe(e);
+    const aviso = {semanal:'<p>Si cambias el cómputo mensual, se recalculan todos los meses.</p>', mensual:'<p>Si acortas las fechas, las marcas de los meses que quedan fuera dejan de contar.</p>', anual:'<p>Si cambias la fecha a otro mes, las marcas ya hechas se quedan en el mes original.</p>'}[t];
+    const fd = await modal('Editar actividad ' + t, camposEvento(e) + aviso, 'Guardar cambios'); if(!fd) return;
+    const d = datosEvento(fd, t); if(typeof d === 'string'){ toast(d); return; }
+    guardar(() => DB.set('eventos', e.id, d, true), 'Cambios guardados');
+  },
+  async borrarEvento(b){
+    const e = S.eventos.find(x => x.id === b.dataset.id); if(!e) return;
+    const fd = await modal('Eliminar actividad', `<p>«${esc(e.nombre)}» dejará de aparecer en las tablas, los resúmenes y el dashboard, y se perderá lo marcado.</p>`, 'Eliminar actividad', true);
+    if(fd) guardar(() => DB.del('eventos', e.id), 'Actividad eliminada');
+  },
+  async uActivo(b){
+    const u = S.usuarios.find(x => x.id === b.dataset.id); if(!u) return;
+    if(u.activo !== false){ const fd = await modal('Desactivar usuario', `<p>${esc(u.nombre)} no podrá entrar en la app. Sus chicos seguirán a su nombre hasta que los reasignes.</p>`, 'Desactivar', true); if(!fd) return; }
+    guardar(() => DB.set('usuarios', u.id, {activo:u.activo === false}, true), u.activo === false ? `${u.nombre} activado` : `${u.nombre} desactivado`);
+  },
+  async uNuevoAcceso(b){
+    const u = S.usuarios.find(x => x.id === b.dataset.id); if(!u) return;
+    const fd = await modal('Nuevo acceso para ' + u.nombre, `<p>Se crea un usuario nuevo con el mismo perfil, sus chicos pasan a él y el acceso antiguo queda desactivado.</p>
+      <label>Nuevo usuario<input name="usuario" required maxlength="30" autocapitalize="none" value="${esc((u.usuario || usuarioDe(u.nombre)) + '2')}"></label>
+      <label>Contraseña inicial<input type="text" name="password" required minlength="6" autocomplete="off"></label>`, 'Crear acceso');
+    if(!fd) return;
+    const usuario = String(fd.get('usuario')).trim().toLowerCase(); const password = String(fd.get('password'));
+    if(!/^[a-z0-9._-]{2,30}$/.test(usuario)){ toast('El usuario solo admite letras sin tilde, números, punto y guion.'); return; }
+    if(password.length < 6){ toast('La contraseña debe tener al menos 6 caracteres.'); return; }
+    await guardar(async () => {
+      const nuevo = await DB.createUser({usuario, password, nombre:u.nombre, rol:u.rol, curso:u.curso || '', activo:true});
+      for(const x of S.chicos.filter(c => c.responsable === u.id)) await DB.set('chicos', x.id, {responsable:nuevo}, true);
+      await DB.set('usuarios', u.id, {activo:false}, true);
+    }, `Nuevo acceso creado: ${usuario}`);
+  },
+  async miCuenta(){
+    const fd = await modal('Cambiar mi contraseña', `<label>Contraseña actual<input type="password" name="actual" required autocomplete="current-password"></label>
+      <label>Contraseña nueva<input type="password" name="nueva" required minlength="6" autocomplete="new-password"></label>
+      <label>Repite la nueva<input type="password" name="nueva2" required minlength="6" autocomplete="new-password"></label>`, 'Cambiar contraseña');
+    if(!fd) return;
+    if(fd.get('nueva') !== fd.get('nueva2')){ toast('Las dos contraseñas nuevas no coinciden.'); return; }
+    guardar(() => DB.cambiarPassword(String(fd.get('actual')), String(fd.get('nueva'))), 'Contraseña cambiada');
+  },
+  sugerir(){ abrirSugerencia(); },
+  dashEditar(){ S.dashEdit = !S.dashEdit; render(); },
+  wMover(b){ const ws = [...widgetsActuales()]; const i = +b.dataset.i, j = i + +b.dataset.d; if(j < 0 || j >= ws.length) return; [ws[i], ws[j]] = [ws[j], ws[i]]; guardarWidgets(ws); },
+  wQuitar(b){ const ws = widgetsActuales().filter((w,i) => i !== +b.dataset.i); guardarWidgets(ws); },
+  sgVista(b){ guardar(() => DB.set('sugerencias', b.dataset.id, {estado:'vista'}, true)); },
+  async sgBorrar(b){ const fd = await modal('Eliminar sugerencia', '<p>La sugerencia se borrará definitivamente.</p>', 'Eliminar', true); if(fd) guardar(() => DB.del('sugerencias', b.dataset.id), 'Sugerencia eliminada'); },
+  async copiarInforme(){
+    const t = document.getElementById('informe'); if(!t) return;
+    try{ await navigator.clipboard.writeText(t.value); toast('Informe copiado. Pégalo en el chat con Claude.'); }
+    catch(e){ t.focus(); t.select(); toast('Selecciona el texto y cópialo a mano.'); }
+  },
+  async demoEntrar(b){ try{ await DB.login(b.dataset.usuario, 'demo'); }catch(e){ toast(e.message); } }
+};
+const SUBMIT = {
+  async login(f){
+    const fd = new FormData(f); const msg = document.getElementById('login-msg'); msg.textContent = '';
+    const btn = f.querySelector('[type=submit]'); btn.disabled = true;
+    try{ await DB.login(String(fd.get('usuario')), String(fd.get('pass'))); }catch(e){ msg.textContent = e.message; btn.disabled = false; }
+  },
+  async arranque(f){
+    const fd = new FormData(f); const msg = document.getElementById('login-msg'); msg.textContent = '';
+    const nombre = String(fd.get('nombre')).trim(); const usuario = String(fd.get('usuario')).trim().toLowerCase(); const pass = String(fd.get('pass'));
+    if(!/^[a-z0-9._-]{2,30}$/.test(usuario)){ msg.textContent = 'El usuario solo admite letras sin tilde, números, punto y guion.'; return; }
+    if(pass !== fd.get('pass2')){ msg.textContent = 'Las dos contraseñas no coinciden.'; return; }
+    const btn = f.querySelector('[type=submit]'); btn.disabled = true; S.arrancando = true;
+    try{
+      const uid = await DB.registrarPrincipal(usuario, pass);
+      await DB.set('usuarios', uid, {nombre, usuario, rol:'superadmin', curso:'', activo:true}, false);
+      await DB.set('eventos', 'tutoria', {tipo:'mensual', nombre:'Tutoría', cursos:[], desde:'', hasta:'', orden:1}, false);
+      await DB.set('eventos', 'padres', {tipo:'mensual', nombre:'Hablado con padres', cursos:[], desde:'', hasta:'', orden:2}, false);
+      await DB.set('config', 'arranque', {principal:uid, fecha:new Date().toISOString()}, false);
+      S.arrancando = false; procesarAuth({uid});
+    }catch(e){ console.error(e); S.arrancando = false; btn.disabled = false; msg.textContent = e.message || 'No se pudo completar la puesta en marcha.'; }
+  },
+  async nuevoChico(f){
+    const fd = new FormData(f); const nombre = String(fd.get('nombre')).trim(); if(!nombre) return;
+    const curso = esAdmin() ? fd.get('curso') : S.profile.curso;
+    if(await guardar(() => DB.add('chicos', {nombre, curso, responsable:fd.get('responsable') || '', activo:true}), `${nombre} añadido`)){
+      const r = fd.get('responsable'); finForm(f);
+      const sel = document.getElementById('nc-resp'); const sc = document.getElementById('nc-curso');
+      if(sc){ sc.value = curso; sel.innerHTML = opcionesResp(curso, r); } else if(sel) sel.value = r;
+    }
+  },
+  async nuevoEvento(f){
+    const fd = new FormData(f); const tipo = ['semanal','mensual','anual'].includes(fd.get('tipo')) ? fd.get('tipo') : 'anual';
+    const d = datosEvento(fd, tipo); if(typeof d === 'string'){ toast(d); return; }
+    if(tipo === 'mensual') d.orden = Date.now();
+    const msg = {semanal:`«${d.nombre}» creada: aparecerá cada semana`, mensual:`«${d.nombre}» creada: aparecerá cada mes`, anual:`«${d.nombre}» creada para el ${d.fecha ? fechaLarga(d.fecha) : ''}`}[tipo];
+    if(await guardar(() => DB.add('eventos', d), msg)) finForm(f);
+  },
+  async nuevoUsuario(f){
+    const fd = new FormData(f); const rol = fd.get('rol') === 'admin' && esPrincipal() ? 'admin' : 'responsable';
+    const datos = {usuario:String(fd.get('usuario')).trim().toLowerCase(), password:String(fd.get('password')), nombre:String(fd.get('nombre')).trim(), rol, curso:rol === 'responsable' ? fd.get('curso') : '', activo:true};
+    if(!/^[a-z0-9._-]{2,30}$/.test(datos.usuario)){ toast('El usuario solo admite letras sin tilde, números, punto y guion.'); return; }
+    if(datos.password.length < 6){ toast('La contraseña debe tener al menos 6 caracteres.'); return; }
+    const btn = f.querySelector('[type=submit]'); btn.disabled = true;
+    const ok = await guardar(() => DB.createUser(datos), `${datos.nombre} dado de alta con el usuario ${datos.usuario}`);
+    btn.disabled = false; if(ok) finForm(f);
+  },
+  async nuevoWidget(f){
+    const fd = new FormData(f); const tipo = fd.get('tipo');
+    const w = {id:nuevoId(), tipo, titulo:String(fd.get('titulo') || '').trim()};
+    if(tipo !== 'anuales'){ w.variable = fd.get('variable'); if(!w.variable){ toast('Crea antes alguna actividad.'); return; } }
+    if(await guardarWidgets([...widgetsActuales(), w])){ toast('Gráfico añadido'); finForm(f); }
+  },
+  async objetivos(f){
+    const fd = new FormData(f); const vs = variables();
+    const val = v => { const x = String(fd.get('obj_' + v.id) ?? '').trim(); if(x === '') return null; const n = Math.max(0, Math.min(100, Math.round(+x))); return isNaN(n) ? null : n; };
+    await guardar(async () => {
+      for(const v of vs){ const n = val(v); if(n === v.objetivo) continue;
+        if(v.id === '__anuales') await DB.set('config', 'dashboard', {objAnuales:n}, true); else await DB.set('eventos', v.id, {objetivo:n}, true); }
+    }, 'Objetivos guardados');
+    if(document.activeElement) document.activeElement.blur(); render();
+  }
+};
+const CHANGE = {
+  filtroResp(t){ S.filtroResp = t.value; render(); },
+  anio(t){ S.anio = +t.value; render(); },
+  infNombres(t){ S.infNombres = t.checked; render(); },
+  resp(t){ const x = S.chicos.find(c => c.id === t.dataset.id); if(!x) return; const n = nombreUsuario(t.value);
+    guardar(() => DB.set('chicos', x.id, {responsable:t.value}, true), t.value ? `${x.nombre} pasa a ${n}` : `${x.nombre} queda sin responsable`); },
+  ucurso(t){ const u = S.usuarios.find(x => x.id === t.dataset.id); if(!u) return;
+    guardar(() => DB.set('usuarios', u.id, {curso:t.value}, true), `${u.nombre} pasa a ${cursoNombre(t.value)}. Reasigna sus chicos anteriores.`); }
+};
+
+document.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if(!b || !CLICK[b.dataset.a]) return; e.preventDefault(); CLICK[b.dataset.a](b); });
+document.addEventListener('submit', e => { const f = e.target.closest('[data-f]'); if(!f || !SUBMIT[f.dataset.f]) return; e.preventDefault(); SUBMIT[f.dataset.f](f); });
+document.addEventListener('change', e => {
+  const t = e.target;
+  if(t.id === 'nc-curso'){ const s = document.getElementById('nc-resp'); if(s) s.innerHTML = opcionesResp(t.value, ''); return; }
+  if(t.id === 'ne-tipo'){ document.querySelectorAll('.ne-t').forEach(el => el.style.display = el.classList.contains('ne-' + t.value) ? '' : 'none'); return; }
+  if(t.id === 'nw-tipo'){ const l = document.getElementById('nw-var'); if(l) l.style.display = t.value === 'anuales' ? 'none' : ''; return; }
+  if(t.id === 'nu-rol'){ const l = document.getElementById('nu-curso-l'); if(l) l.style.display = t.value === 'admin' ? 'none' : ''; return; }
+  if(t.dataset && CHANGE[t.dataset.ch]) CHANGE[t.dataset.ch](t);
+});
+document.addEventListener('focusout', () => { if(S.pend) setTimeout(() => { if(S.pend && !editando()) render(); }, 60); });
+
+arrancar();
+if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
