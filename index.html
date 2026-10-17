@@ -225,6 +225,29 @@ legend{font-size:.88rem;font-weight:600;color:var(--muted);margin-bottom:.4rem}
 .menu-lista .btn{width:100%;text-align:left}
 @media (max-width:760px){ .tabs{display:none} .abajo{display:flex} .main{padding-bottom:calc(6rem + env(safe-area-inset-bottom,0px))} #toast{bottom:calc(5.2rem + env(safe-area-inset-bottom,0px))} .quien-txt{display:none} }
 
+.inds{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:.5rem}
+.ind{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.7rem .85rem;border:1px solid var(--line);border-radius:10px}
+.ind span{font-weight:600}
+.ind small{display:block;font-weight:400;color:var(--muted);font-size:.8rem;margin-top:.15rem}
+.ind b{font-family:var(--display);font-size:1.6rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ind small.aviso-f{color:var(--no)}
+.tabla.hist td{min-width:54px;font-variant-numeric:tabular-nums}
+.tabla .mes-act{background:var(--star-soft)}
+.fila-inf{border-bottom:1px solid var(--line);padding-bottom:.7rem;margin-bottom:.7rem}
+.solo-print{display:none}
+@page{size:A4 landscape;margin:12mm}
+@media print{
+  :root{--ink:#111;--muted:#555;--line:#ccc;--surface:#fff;--surface-2:#f4f4f4;--star-soft:#fff3d6;padding:0}
+  body{background:#fff;color:#111}
+  body::before,.cab,.abajo,.aviso-demo,.no-print,#toast{display:none!important}
+  .solo-print{display:block;font-size:16pt;margin:0 0 4mm}
+  .main{padding:0;max-width:none}
+  .bloque{border:1px solid #ccc;break-inside:avoid;background:#fff;margin-bottom:5mm}
+  .tabla-wrap{overflow:visible;border:0}
+  .tabla{width:100%;font-size:8.5pt}
+  .tabla .nom{position:static;min-width:0}
+  .ind{padding:2mm 3mm} .ind b{font-size:14pt}
+}
 .yo{background:none;border:0;color:inherit;text-align:right;cursor:pointer;padding:.2rem .3rem;border-radius:8px}
 .yo:hover{background:var(--night-2)}
 .tab.sugerir{margin-left:auto;color:var(--star-on-night)}
@@ -626,7 +649,7 @@ function renderSinAcceso(t){
 
 /* ============================ Render principal ============================ */
 function tabsDisponibles(){
-  const t = [{id:'seguimiento',nombre:'Acompañamiento',corto:'Acompañar'},{id:'chicos',nombre:'Chicos'},{id:'resumen',nombre:'Resumen del mes',corto:'Resumen'},{id:'dashboard',nombre:'Dashboard'}];
+  const t = [{id:'seguimiento',nombre:'Acompañamiento',corto:'Acompañar'},{id:'chicos',nombre:'Chicos'},{id:'resumen',nombre:'Informe',corto:'Informe'},{id:'dashboard',nombre:'Dashboard'}];
   if(esAdmin()) t.push({id:'eventos',nombre:'Actividades'},{id:'usuarios',nombre:'Usuarios'});
   if(esPrincipal()){ const n = S.sugerencias.filter(s => s.estado !== 'vista').length; t.push({id:'mejoras',nombre:'Mejoras' + (n ? ` (${n})` : '')}); }
   return t;
@@ -744,7 +767,7 @@ function tablaCurso(c, cols, modo){
 }
 
 function fichasCurso(ch, cols, ids){
-  return `<ul class="fichas">${ch.map(x => `<li class="ficha"><div class="ficha-cab"><b>${esc(x.nombre)}</b><small>${esc(ids.has(x.responsable) ? nombreUsuario(x.responsable) : 'Sin preceptor')}</small></div><div class="ficha-chips">${cols.map(col => {
+  return `<ul class="fichas">${ch.map(x => `<li class="ficha"><div class="ficha-cab"><b>${esc(x.nombre)}</b><small>${esc(ids.has(x.responsable) ? nombreUsuario(x.responsable) : 'Sin preceptor')}${x.grupo ? '. ' + GRUPOS_CH[x.grupo] : ''}</small></div><div class="ficha-chips">${cols.map(col => {
     if(col.tipo === 'agregado'){ const r = agregado(x.id, col.ev, col.mes); return `<span class="chip-dato">${esc(col.nombre)}: <b>${r.txt}</b></span>`; }
     const v = valor(x.id, col.mes, col.key);
     return `<button class="chip-m ${v}" data-a="marcar" data-chico="${x.id}" data-key="${col.key}" data-mes="${col.mes}" data-foco="${x.id}|${col.key}" aria-pressed="${v==='si'}">${v==='si' ? '✓ ' : ''}${esc(col.nombre)}${col.fecha ? ` <small>${fechaCorta(col.fecha)}</small>` : ''}</button>`; }).join('')}</div></li>`).join('')}</ul>`;
@@ -756,6 +779,7 @@ function vistaChicos(){
   const form = `<form class="panel" data-f="nuevoChico"><h3>Añadir chico</h3><div class="campos">
     <label>Nombre<input name="nombre" required maxlength="60" autocomplete="off" placeholder="Nombre e inicial del apellido"></label>
     ${esAdmin() ? `<label>Curso<select name="curso" id="nc-curso">${CURSOS.map(c => `<option value="${c.id}" ${c.id===cursoForm?'selected':''}>${c.nombre}</option>`).join('')}</select></label>` : ''}
+    <label>Grupo<select name="grupo"><option value="">Sin indicar</option>${Object.entries(GRUPOS_CH).map(([k,t]) => `<option value="${k}">${t}</option>`).join('')}</select></label>
     <label>Preceptor<select name="responsable" id="nc-resp">${opcionesResp(cursoForm, esAdmin() ? '' : S.profile.id)}</select></label>
     <button class="btn" type="submit">Añadir chico</button></div></form>`;
   const lista = c => {
@@ -765,6 +789,7 @@ function vistaChicos(){
       const huerfano = x.responsable && !rs.some(r => r.id === x.responsable);
       return `<li><span class="li-nom">${esc(x.nombre)}${huerfano ? '<small>Su preceptor ya no está en este curso</small>' : ''}</span>
         <label class="sel"><span class="vh">Preceptor de ${esc(x.nombre)}</span><select data-ch="resp" data-id="${x.id}">${opcionesResp(c, huerfano ? '' : x.responsable)}</select></label>
+        <label class="sel"><span class="vh">Grupo de ${esc(x.nombre)}</span><select data-ch="grupo" data-id="${x.id}"><option value="">Grupo sin indicar</option>${Object.entries(GRUPOS_CH).map(([k,t]) => `<option value="${k}" ${x.grupo === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
         <button class="btn sec peq" data-a="editarChico" data-id="${x.id}">Editar</button></li>`; }).join('');
     return `<section class="bloque">${cabBloque(c, `<span class="meta">${ch.length} chicos${reparto ? '. ' + reparto : ''}</span>`)}
       ${ch.length ? `<ul class="lista">${items}</ul>` : vacio('Sin chicos todavía. Añade el primero con el formulario de arriba.')}
@@ -840,6 +865,88 @@ function exportarExcel(){
   });
   XLSX.writeFile(wb, `E6-Mizar-${m}.xlsx`);
   toast('Excel descargado');
+}
+
+/* ============================ Informe ============================ */
+const MEDIDAS = {chicos:'Nº de chicos', 'ficha:circulo':'Nº de chicos de círculos (según su ficha)', 'ficha:charla':'Nº de chicos de charlas (según su ficha)', suma:'Suma de asistencias', distintos:'Nº de chicos que asistieron', media_semana:'Media de asistentes por semana'};
+const GRUPOS_CH = {circulo:'Círculos', charla:'Charlas'};
+const norm = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const FILAS_DEF = [
+  {id:'f1', etiqueta:'Nº de chicos', medida:'chicos'},
+  {id:'f2', etiqueta:'Asistentes a charlas', medida:'ficha:charla'},
+  {id:'f3', etiqueta:'Chicos que van a círculos', medida:'ficha:circulo'},
+  {id:'f4', etiqueta:'Visitas a los pobres (total)', fuente:'Visita de pobres', medida:'suma'},
+  {id:'f5', etiqueta:'Chicos que han dado catequesis', fuente:'Catequesis', medida:'distintos'},
+  {id:'f6', etiqueta:'Meditaciones: media de asistentes por semana', fuente:'Meditación', medida:'media_semana'},
+  {id:'f7', etiqueta:'Asistentes al retiro mensual', fuente:'Retiro mensual', medida:'distintos'},
+  {id:'f8', etiqueta:'Asistentes a curso de retiro', fuente:'Curso de retiro', medida:'distintos'},
+  {id:'f9', etiqueta:'Asistentes a convivencias', fuente:'Convivencia', medida:'distintos'},
+  {id:'f10', etiqueta:'Preceptuaciones', fuente:'Preceptuación', medida:'suma'},
+  {id:'f11', etiqueta:'Conversaciones con padres', fuente:'Hablado con padres', medida:'suma'}];
+const cfgInforme = () => S.config.find(d => d.id === 'informe') || {};
+const filasInforme = () => Array.isArray(cfgInforme().filas) ? cfgInforme().filas : FILAS_DEF;
+const eventosDeFuente = f => { const n = norm(f); if(!n) return []; return S.eventos.filter(e => { const x = norm(e.nombre); return x === n || x === n + 's' || n === x + 's'; }); };
+const fmt = v => v === null || v === undefined ? '—' : v.toLocaleString('es-ES');
+function marcasMes(x, e, m){
+  if(!aplica(e, x.curso)) return 0; const t = tipoDe(e);
+  if(t === 'semanal') return semanasComputables(e, m).filter(l => valor(x.id, m, `s_${e.id}_${l}`) === 'si').length;
+  if(t === 'mensual') return activaMes(e, m) && valor(x.id, m, 'a_'+e.id) === 'si' ? 1 : 0;
+  if(t === 'trimestral') return mesInicioTrim(m) === m && activaTrim(e, m) && valor(x.id, m, 't_'+e.id) === 'si' ? 1 : 0;
+  if(anualSinFecha(e)) return m === mesAnualSF(m) && valor(x.id, m, 'y_'+e.id) === 'si' ? 1 : 0;
+  return e.fecha && e.fecha.slice(0,7) === m && valor(x.id, m, 'e_'+e.id) === 'si' ? 1 : 0;
+}
+function semanasDe(evs, meses){ const r = []; meses.forEach(m => semanasMes(m).forEach(l => { if(l <= hoyISO() && evs.some(e => activa(e, l))) r.push({l, m}); })); return r; }
+function asistSemana(ch, evs, w){ return ch.filter(x => evs.some(e => aplica(e, x.curso) && activa(e, w.l) && valor(x.id, w.m, `s_${e.id}_${w.l}`) === 'si')).length; }
+function valorFila(f, ch, meses){
+  if(f.medida === 'chicos') return ch.length;
+  if(f.medida.startsWith('ficha:')) return ch.filter(x => x.grupo === f.medida.slice(6)).length;
+  const evs = eventosDeFuente(f.fuente); meses = meses.filter(m => m <= hoyMes()); if(!evs.length || !meses.length) return null;
+  if(f.medida === 'suma') return ch.reduce((s,x) => s + meses.reduce((a,m) => a + evs.reduce((b,e) => b + marcasMes(x, e, m), 0), 0), 0);
+  if(f.medida === 'distintos') return ch.filter(x => meses.some(m => evs.some(e => marcasMes(x, e, m) > 0))).length;
+  if(f.medida === 'media_semana'){ const ws = semanasDe(evs, meses); if(!ws.length) return null; return Math.round(ws.reduce((s,w) => s + asistSemana(ch, evs, w), 0) / ws.length * 10) / 10; }
+  return null;
+}
+function vistaInforme(){
+  const cursos = cursosSel(); const ch = cursos.flatMap(chicosDe); const filas = filasInforme();
+  const y = cursoEscolarDe(S.mes); const meses = mesesCurso(y); const ambito = cursos.length > 1 ? 'Todos los cursos' : cursoNombre(cursos[0]);
+  const cards = filas.map(f => {
+    const falta = f.fuente && !['chicos'].includes(f.medida) && !f.medida.startsWith('ficha:') && !eventosDeFuente(f.fuente).length;
+    let det = ''; if(f.medida === 'media_semana'){ const evs = eventosDeFuente(f.fuente); const ws = semanasDe(evs, [S.mes]); if(ws.length) det = `<small>${ws.map(w => `${semanaCorta(w.l)}: ${asistSemana(ch, evs, w)}`).join('; ')}</small>`; }
+    return `<li class="ind"><span>${esc(f.etiqueta)}${falta ? `<small class="aviso-f">No hay ninguna actividad llamada «${esc(f.fuente)}»</small>` : ''}${det}</span><b>${fmt(valorFila(f, ch, [S.mes]))}</b></li>`; }).join('');
+  const tabla = (cols, celda, ultima, id) => `<div class="tabla-wrap" data-scroll="${id}"><table class="tabla hist"><thead><tr><th class="nom">Dato</th>${cols.map(c => `<th class="${c.on ? 'mes-act' : ''}">${c.t}</th>`).join('')}<th>${ultima}</th></tr></thead><tbody>${filas.map(f => `<tr><th class="nom" scope="row"><span>${esc(f.etiqueta)}</span></th>${cols.map(c => `<td class="${c.on ? 'mes-act' : ''}">${celda(f, c)}</td>`).join('')}<td><b>${celda(f, null)}</b></td></tr>`).join('')}</tbody></table></div>`;
+  const hist = tabla(meses.map(m => ({m, t:cap(MESES[+m.slice(5)-1].slice(0,3)), on:m === S.mes})), (f,c) => c ? (c.m > hoyMes() ? '' : fmt(valorFila(f, ch, [c.m]))) : fmt(valorFila(f, ch, meses)), 'Curso', 'hist');
+  const porCurso = cursos.length > 1 ? `<section class="bloque"><div class="bloque-cab"><h2>Por curso, ${mesLargo(S.mes)}</h2></div>${tabla(cursos.map(c => ({c, t:cortoCurso(c)})), (f,c) => fmt(valorFila(f, c ? chicosDe(c.c) : ch, [S.mes])), 'Total', 'pc')}</section>` : '';
+  return `<div class="barra no-print">${ctrlMes()}${ctrlCurso()}<button class="btn" data-a="excelInforme">Descargar Excel</button><button class="btn sec" data-a="imprimir">Imprimir o guardar PDF</button>${esAdmin() ? `<button class="btn sec" data-a="infEditar">${S.infEdit ? 'Terminar' : 'Configurar informe'}</button>` : ''}</div>
+    ${S.infEdit && esAdmin() ? panelInforme(filas) : ''}
+    <h1 class="solo-print">E6 Mizar. Informe de ${mesLargo(S.mes)}. ${ambito}</h1>
+    <section class="bloque"><div class="bloque-cab"><h2>${cap(mesLargo(S.mes))}</h2><span class="meta">${ambito}</span></div><ul class="inds">${cards}</ul></section>
+    <section class="bloque"><div class="bloque-cab"><h2>Histórico del curso ${y}-${String(y+1).slice(2)}</h2><span class="meta">${ambito}</span></div>${hist}
+      <p class="nota">«Curso» es el acumulado de septiembre a hoy; en las medias, la media de todas las semanas. El nº de chicos y los de círculos o charlas usan los datos actuales de las fichas.</p></section>${porCurso}`;
+}
+function panelInforme(filas){
+  const nombres = [...new Set(S.eventos.map(e => e.nombre))].sort((a,b) => a.localeCompare(b, 'es'));
+  return `<form class="panel no-print" data-f="informe"><h3>Datos del informe</h3><p class="nota" style="margin:0 0 .6rem">Cada fila es un dato. Elige qué medir y de qué actividad. Las ocasionales con el mismo nombre (por ejemplo, todas las convivencias) se suman.</p>
+    ${filas.map((f,i) => `<div class="campos fila-inf" data-id="${esc(f.id)}"><label>Nombre del dato<input name="et_${i}" value="${esc(f.etiqueta)}" maxlength="80"></label>
+      <label>Qué medir<select name="me_${i}">${Object.entries(MEDIDAS).map(([k,t]) => `<option value="${k}" ${f.medida === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+      <label>Actividad<select name="fu_${i}"><option value="">—</option>${nombres.map(n => `<option value="${esc(n)}" ${norm(n) === norm(f.fuente) ? 'selected' : ''}>${esc(n)}</option>`).join('')}${f.fuente && !nombres.some(n => norm(n) === norm(f.fuente)) ? `<option value="${esc(f.fuente)}" selected>${esc(f.fuente)} (aún no existe)</option>` : ''}</select></label>
+      <span class="w-ctrl"><button type="button" class="icono" data-a="ifMover" data-i="${i}" data-d="-1" aria-label="Subir">↑</button><button type="button" class="icono" data-a="ifMover" data-i="${i}" data-d="1" aria-label="Bajar">↓</button><button type="button" class="btn sec peq" data-a="ifQuitar" data-i="${i}">Quitar</button></span></div>`).join('')}
+    <div class="campos" style="margin-top:.8rem"><button type="button" class="btn sec" data-a="ifAnadir">Añadir dato</button><button class="btn" type="submit">Guardar informe</button></div></form>`;
+}
+function leerFilasInforme(){
+  const f = document.querySelector('[data-f=informe]'); if(!f) return filasInforme().map(x => ({...x})); const fd = new FormData(f);
+  return [...f.querySelectorAll('.fila-inf')].map((el,i) => ({id:el.dataset.id, etiqueta:String(fd.get('et_'+i) || '').trim() || 'Dato', medida:fd.get('me_'+i), fuente:fd.get('fu_'+i) || ''}));
+}
+const guardarFilas = fs => guardar(() => DB.set('config', 'informe', {filas:fs}, true));
+function excelInforme(){
+  if(typeof XLSX === 'undefined'){ toast('No se pudo cargar el generador de Excel. Revisa la conexión.'); return; }
+  const cursos = cursosSel(); const y = cursoEscolarDe(S.mes); const meses = mesesCurso(y); const filas = filasInforme(); const wb = XLSX.utils.book_new();
+  const hoja = ch => { const aoa = [['Dato', ...meses.map(m => cap(MESES[+m.slice(5)-1]) + ' ' + m.slice(0,4)), 'Curso escolar']];
+    filas.forEach(f => aoa.push([f.etiqueta, ...meses.map(m => m > hoyMes() ? '' : (valorFila(f, ch, [m]) ?? '')), valorFila(f, ch, meses) ?? '']));
+    const h = XLSX.utils.aoa_to_sheet(aoa); h['!cols'] = [{wch:46}, ...meses.map(() => ({wch:12})), {wch:14}]; return h; };
+  const nom = c => cursoNombre(c).replace(/[:\\/?*\[\]]/g,'').slice(0,31);
+  XLSX.utils.book_append_sheet(wb, hoja(cursos.flatMap(chicosDe)), cursos.length > 1 ? 'Total' : nom(cursos[0]));
+  if(cursos.length > 1) cursos.forEach(c => XLSX.utils.book_append_sheet(wb, hoja(chicosDe(c)), nom(c)));
+  XLSX.writeFile(wb, `E6-Mizar-informe-${y}-${y+1}.xlsx`); toast('Excel descargado');
 }
 
 /* ============================ Dashboard ============================ */
@@ -1067,7 +1174,7 @@ function vistaUsuarios(){
       return `<section class="bloque">${cabBloque(c.id, `<span class="meta">${rs.filter(r => r.activo !== false).length} preceptores</span>`)}${rs.length ? `<ul class="lista">${rs.map(fila).join('')}</ul>` : vacio('Sin preceptores. Dalos de alta con el formulario de arriba.')}</section>`; }).join('')}`;
 }
 
-const VISTAS = {seguimiento:vistaSeguimiento, chicos:vistaChicos, resumen:vistaResumen, dashboard:vistaDashboard, eventos:vistaEventos, usuarios:vistaUsuarios, mejoras:vistaMejoras};
+const VISTAS = {seguimiento:vistaSeguimiento, chicos:vistaChicos, resumen:vistaInforme, dashboard:vistaDashboard, eventos:vistaEventos, usuarios:vistaUsuarios, mejoras:vistaMejoras};
 
 /* ============================ Acciones ============================ */
 async function guardar(fn, ok){ try{ await fn(); if(ok) toast(ok); return true; }catch(e){ console.error(e); toast(e && e.message && !/permission/i.test(e.message) ? e.message : 'No se pudo guardar. Comprueba la conexión o tus permisos.'); return false; } }
@@ -1147,6 +1254,12 @@ const CLICK = {
     guardar(() => DB.cambiarPassword(String(fd.get('actual')), String(fd.get('nueva'))), 'Contraseña cambiada');
   },
   sugerir(){ abrirSugerencia(); },
+  excelInforme(){ excelInforme(); },
+  imprimir(){ window.print(); },
+  infEditar(){ S.infEdit = !S.infEdit; render(); },
+  ifMover(b){ const fs = leerFilasInforme(); const i = +b.dataset.i, j = i + +b.dataset.d; if(j < 0 || j >= fs.length) return; [fs[i], fs[j]] = [fs[j], fs[i]]; guardarFilas(fs); },
+  ifQuitar(b){ guardarFilas(leerFilasInforme().filter((f,i) => i !== +b.dataset.i)); },
+  ifAnadir(){ guardarFilas([...leerFilasInforme(), {id:nuevoId(), etiqueta:'Nuevo dato', medida:'suma', fuente:''}]); },
   vistaTipo(b){ S.vista = b.dataset.v; render(); },
   miMenu(){ const p = S.profile; menuModal(p.nombre, `<p class="nota" style="margin:0">${esc(rolTxt(p))}. Usuario: ${esc(p.usuario || '')}</p>
     <button class="btn sec" data-a="miCuenta" type="button">Cambiar mi contraseña</button><button class="btn sec" data-a="sugerir" type="button">Sugerir una mejora</button><button class="btn sec" data-a="salir" type="button">Salir</button>`); },
@@ -1188,7 +1301,7 @@ const SUBMIT = {
   async nuevoChico(f){
     const fd = new FormData(f); const nombre = String(fd.get('nombre')).trim(); if(!nombre) return;
     const curso = esAdmin() ? fd.get('curso') : S.profile.curso;
-    if(await guardar(() => DB.add('chicos', {nombre, curso, responsable:fd.get('responsable') || '', activo:true}), `${nombre} añadido`)){
+    if(await guardar(() => DB.add('chicos', {nombre, curso, responsable:fd.get('responsable') || '', grupo:fd.get('grupo') || '', activo:true}), `${nombre} añadido`)){
       const r = fd.get('responsable'); finForm(f);
       const sel = document.getElementById('nc-resp'); const sc = document.getElementById('nc-curso');
       if(sc){ sc.value = curso; sel.innerHTML = opcionesResp(curso, r); } else if(sel) sel.value = r;
@@ -1210,6 +1323,7 @@ const SUBMIT = {
     const ok = await guardar(() => DB.createUser(datos), `${datos.nombre} dado de alta con el usuario ${datos.usuario}`);
     btn.disabled = false; if(ok) finForm(f);
   },
+  async informe(f){ if(await guardarFilas(leerFilasInforme())) toast('Informe guardado'); if(document.activeElement) document.activeElement.blur(); render(); },
   async nuevoWidget(f){
     const fd = new FormData(f); const tipo = fd.get('tipo');
     const w = {id:nuevoId(), tipo, titulo:String(fd.get('titulo') || '').trim()};
@@ -1235,6 +1349,7 @@ const CHANGE = {
   infNombres(t){ S.infNombres = t.checked; render(); },
   resp(t){ const x = S.chicos.find(c => c.id === t.dataset.id); if(!x) return; const n = nombreUsuario(t.value);
     guardar(() => DB.set('chicos', x.id, {responsable:t.value}, true), t.value ? `${x.nombre} pasa a ${n}` : `${x.nombre} queda sin preceptor`); },
+  grupo(t){ const x = S.chicos.find(c => c.id === t.dataset.id); if(x) guardar(() => DB.set('chicos', x.id, {grupo:t.value}, true), t.value ? `${x.nombre}: ${GRUPOS_CH[t.value]}` : 'Grupo quitado'); },
   ucurso(t){ const u = S.usuarios.find(x => x.id === t.dataset.id); if(!u) return;
     guardar(() => DB.set('usuarios', u.id, {curso:t.value}, true), `${u.nombre} pasa a ${cursoNombre(t.value)}. Reasigna sus chicos anteriores.`); }
 };
