@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>E6 Mizar</title>
 <meta name="theme-color" content="#1B2A4E">
+<meta name="color-scheme" content="light dark">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -257,6 +258,32 @@ legend{font-size:.88rem;font-weight:600;color:var(--muted);margin-bottom:.4rem}
 .man summary{cursor:pointer;font-weight:600}
 .man p{margin:.5rem 0 0;color:var(--ink)}
 @media print{ .w-chicos,.w-ctrl{display:none!important} .dash{display:block} .dash .bloque{margin-bottom:5mm} }
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.4rem;vertical-align:middle;background:var(--muted)}
+.dot.ok{background:var(--ok)} .dot.medio{background:var(--star)} .dot.bajo{background:var(--no)}
+.falta{margin:-.2rem 0 .5rem;font-size:.85rem;color:var(--no)}
+.acts{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}
+.paso{flex:1 1 100%;display:flex;align-items:center;gap:.5rem;padding:.25rem 0;border-bottom:1px dashed var(--line)}
+.paso span{flex:1;font-weight:600}
+.paso small{display:block;font-weight:400;color:var(--muted);font-size:.78rem}
+.paso b{min-width:2ch;text-align:center;font-size:1.25rem;font-variant-numeric:tabular-nums}
+.paso b.ok{color:var(--ok)}
+.paso .icono{width:44px;height:44px;font-size:1.3rem}
+.paso .icono:disabled{opacity:.35}
+select.num{width:58px;min-height:40px;text-align:center;padding:.3rem}
+select.num.ok{background:var(--ok-bg);color:var(--ok);border-color:var(--ok);font-weight:700}
+.semaforo td.sem{min-width:86px}
+.sem b{display:block;font-size:1.05rem}
+.sem small{display:block;font-size:.75rem;opacity:.85}
+.sem.ok{background:var(--ok-bg);color:var(--ok)} .sem.medio{background:var(--star-soft);color:var(--star)} .sem.bajo{background:var(--no-bg);color:var(--no)} .sem.neutro{color:var(--muted)}
+.fila-total th,.fila-total td{border-top:2px solid var(--ink)}
+.alerta{border-left:4px solid var(--star)}
+.alerta summary{cursor:pointer;font-family:var(--display);font-weight:700;font-size:1.05rem}
+.alerta p{margin:.6rem 0 0}
+html,body{overflow-x:hidden;max-width:100%}
+input,select,textarea{font-size:max(16px,1em)}
+#toast{opacity:0;visibility:hidden;transition:transform .25s,opacity .25s,visibility .25s}
+#toast.ver{opacity:1;visibility:visible}
+@media print{ .semaforo .sem{-webkit-print-color-adjust:exact;print-color-adjust:exact} }
 .yo{background:none;border:0;color:inherit;text-align:right;cursor:pointer;padding:.2rem .3rem;border-radius:8px}
 .yo:hover{background:var(--night-2)}
 .tab.sugerir{margin-left:auto;color:var(--star-on-night)}
@@ -352,7 +379,7 @@ const pct = (a,b) => b ? Math.round(a*100/b) : null;
 const pctTxt = p => p === null ? '—' : p + '%';
 
 let toastT;
-function toast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('ver'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('ver'), 2600); }
+function toast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('ver'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('ver'), 3000); }
 
 function modal(titulo, cuerpo, okTxt = 'Guardar', peligro = false){
   return new Promise(res => {
@@ -373,9 +400,7 @@ function rndSemilla(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = M
 const usuarioDe = n => n.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9._-]/g,'');
 const correoDe = u => String(u).trim().toLowerCase() + '@' + DOMINIO;
 function semillaDemo(){
-  const db = {usuarios:{}, chicos:{}, eventos:{}, registros:{}, config:{}, sugerencias:{}};
-  db.eventos.tutoria = {tipo:'mensual', nombre:'Tutoría', cursos:[], desde:'', hasta:'', orden:1, objetivo:100};
-  db.eventos.padres = {tipo:'mensual', nombre:'Hablado con padres', cursos:[], desde:'', hasta:'', orden:2, objetivo:50};
+  const db = {usuarios:{}, chicos:{}, eventos:{}, registros:{}, config:{migracion:{v2:true}}, sugerencias:{}};
   db.usuarios.u_nacho = {nombre:'Nacho', usuario:'nacho', rol:'superadmin', curso:'', activo:true};
   db.usuarios.u_jotas = {nombre:'Jotas', usuario:'jotas', rol:'admin', curso:'', activo:true};
   const resp = {'3ESO':['Álvaro','Diego'], '4ESO':['Pablo','Javier'], '1BACH':['Miguel','Íñigo'], '2BACH':['Andrés','Luis']};
@@ -383,37 +408,21 @@ function semillaDemo(){
   let n = 0;
   for(const c of CURSOS){
     const rs = resp[c.id].map((nm,i) => { const id = 'u_' + c.id.toLowerCase() + i; db.usuarios[id] = {nombre:nm, usuario:usuarioDe(nm), rol:'responsable', curso:c.id, activo:true}; return id; });
-    for(let k=0;k<6;k++){ db.chicos['ch'+n] = {nombre:nombres[n], curso:c.id, responsable:rs[k%2], activo:true}; n++; }
+    for(let k=0;k<6;k++){ db.chicos['ch'+n] = {nombre:nombres[n], curso:c.id, responsable:rs[k%2], grupo:k%3 ? 'circulo' : 'charla', activo:true}; n++; }
   }
-  const rnd = rndSemilla(11);
-  const evComunes = ['Excursión','Salida cultural','Charla','Torneo deportivo','Voluntariado','Jornada de estudio','Concierto','Visita','Olimpiada interna','Fiesta de fin de curso'];
-  const meses = mesesCurso(cursoEscolarActual()).filter(m => m <= hoyMes());
-  meses.forEach((m,i) => {
-    db.eventos['ev'+i+'a'] = {tipo:'anual', nombre:evComunes[i%10], fecha:m+'-05', cursos:[]};
-    if(i%2 === 0) db.eventos['ev'+i+'b'] = {tipo:'anual', nombre:'Salida de ' + (i%4 ? 'Bachillerato' : 'ESO'), fecha:m+'-24', cursos: i%4 ? ['1BACH','2BACH'] : ['3ESO','4ESO']};
-  });
-  const ini = cursoEscolarActual() + '-09-01';
-  db.eventos.sem1 = {tipo:'semanal', nombre:'Actividad semanal', cursos:[], agregacion:'media', desde:ini, hasta:'', objetivo:75};
-  db.eventos.sem2 = {tipo:'semanal', nombre:'Deporte', cursos:['3ESO','4ESO'], agregacion:'suma', desde:ini, hasta:'', objetivo:50};
-  const hoy = hoyISO();
-  Object.entries(db.chicos).forEach(([id,ch]) => {
-    const constancia = .45 + rnd()*.5;
-    meses.forEach(m => {
-      const marcas = {};
-      if(m !== hoyMes() || rnd() < .5){ if(rnd() < constancia + .15) marcas.a_tutoria = 'si'; }
-      if(rnd() < constancia * .8) marcas.a_padres = 'si';
-      Object.entries(db.eventos).forEach(([eid,e]) => {
-        if(e.tipo === 'mensual' || (e.cursos.length && !e.cursos.includes(ch.curso))) return;
-        if(e.tipo === 'semanal'){ semanasMes(m).forEach(l => { if(l <= hoy && rnd() < constancia) marcas[`s_${eid}_${l}`] = 'si'; }); return; }
-        if(e.fecha.slice(0,7) === m && e.fecha <= hoy && rnd() < constancia) marcas['e_'+eid] = 'si';
-      });
-      db.registros[id+'_'+m] = {chicoId:id, curso:ch.curso, mes:m, marcas};
-    });
-  });
+  const A = [['csr','Círculo','csr','numero','media_semana',4,'mes','circulo'],['med','Meditación','med','numero','media_semana',2,'mes',''],['precp','Preceptuación','precp','numero','suma',2,'mes',''],
+    ['rtm','Retiro mensual','rtm','sino','chicos',1,'mes',''],['vp','Visita de pobres','vp','numero','suma',null,'mes',''],['padres','Conversación con padres','padres','numero','suma',1,'trimestre',''],['charla','Charlas','charla','numero','chicos',null,'mes','charla']];
+  A.forEach(([id,nombre,abrev,dato,total,esperado,periodo,grupo],i) => db.eventos[id] = {v:2, nombre, abrev, dato, total, esperado, periodo, grupo, cursos:[], orden:i+1});
+  const rnd = rndSemilla(11); const meses = mesesCurso(cursoEscolarActual()).filter(m => m <= hoyMes());
+  Object.entries(db.chicos).forEach(([id,ch]) => { const k = .35 + rnd()*.6;
+    meses.forEach(m => { const mc = {}; const r = x => Math.round(rnd() * x * k);
+      if(ch.grupo === 'circulo') mc.n_csr = r(4); else mc.n_charla = r(2);
+      mc.n_med = r(3); mc.n_precp = r(3); mc.n_rtm = rnd() < k ? 1 : 0; mc.n_vp = rnd() < .3 ? 1 : 0; mc.n_padres = rnd() < .25 ? 1 : 0;
+      db.registros[id+'_'+m] = {chicoId:id, curso:ch.curso, mes:m, marcas:mc}; }); });
   return db;
 }
 function crearDemo(){
-  const KEY = 'e6mizar-demo-v4';
+  const KEY = 'e6mizar-demo-v5';
   let mem = null; const escuchas = []; let authCb = null;
   const cargar = () => { if(mem) return mem; try{ const t = localStorage.getItem(KEY); if(t) mem = JSON.parse(t); }catch(e){} if(!mem){ mem = semillaDemo(); guardar(); } return mem; };
   const guardar = () => { try{ localStorage.setItem(KEY, JSON.stringify(mem)); }catch(e){} };
@@ -507,7 +516,7 @@ async function crearFirebase(){
 /* ============================== Estado ============================== */
 let DB;
 const S = {user:null, profile:null, usuarios:[], chicos:[], eventos:[], registros:[], config:[], reg:{}, unsubs:[],
-  view:'seguimiento', mes:hoyMes(), curso:'todos', filtro:'mios', filtroResp:'todos', anio:cursoEscolarActual(), dashAccion:null, modo:'semana', semana:lunesDe(hoyISO()), sugerencias:[], graficos:[], dashEdit:false, vista:(window.innerWidth < 760) ? 'fichas' : 'tabla', infNombres:false, arrancando:false, pend:false, charts:[]};
+  view:'seguimiento', mes:hoyMes(), curso:'todos', filtro:'mios', filtroResp:'todos', anio:cursoEscolarActual(), dashAccion:null, modo:'semana', semana:lunesDe(hoyISO()), sugerencias:[], graficos:[], dashEdit:false, vista:(window.innerWidth < 760) ? 'fichas' : 'tabla', dashPor:'curso', infNombres:false, arrancando:false, pend:false, charts:[]};
 
 const esAdmin = () => !!S.profile && (S.profile.rol === 'admin' || S.profile.rol === 'superadmin');
 const esPrincipal = () => !!S.profile && S.profile.rol === 'superadmin';
@@ -680,7 +689,7 @@ function render(){
   if(foco){ const el = document.querySelector(`[data-foco="${CSS.escape(foco)}"]`); if(el) el.focus({preventScroll:true}); }
   window.scrollTo(0, y);
   if(S.view === 'dashboard') dibujarGraficos();
-  if(!S.popups){ S.popups = true; setTimeout(revisarAvisos, 300); }
+  if(!S.popups){ S.popups = true; setTimeout(revisarAvisos, 300); if(esPrincipal()) setTimeout(migrarV2, 600); }
 }
 const ICONOS = {seguimiento:'<path d="M4 6h16M4 12h16M4 18h10"/>', chicos:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5a3 3 0 0 1 0 6M21 20c0-2.6-1.7-4.8-4-5.6"/>', resumen:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>', dashboard:'<path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/>', mas:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'};
 const ico = k => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONOS[k]}</svg>`;
@@ -705,85 +714,100 @@ function ctrlCurso(){
 }
 function cabBloque(c, extra = ''){ return `<div class="bloque-cab"><span class="punto" style="--cc:${colorCurso(c)}"></span><h2>${cursoNombre(c)}</h2>${extra}</div>`; }
 
-/* ============================ Seguimiento ============================ */
-const GRUPO_TXT = {accion:'Mensuales', trim:'Trimestrales', semanal:'Semanales', agregado:'Semanales: cómputo del mes', ocasional:'Ocasionales', evento:'Anuales', anualsf:'Anuales del curso'};
-function columnasSemana(c, l){
-  const fin = addD(l, 6);
-  return [
-    ...S.eventos.filter(e => activa(e, l) && aplica(e, c)).sort(porNombre).map(e => ({key:`s_${e.id}_${l}`, nombre:e.nombre, tipo:'semanal', mes:mesDeSemana(l)})),
-    ...S.eventos.filter(e => conFecha(e) && e.fecha.length === 10 && e.fecha >= l && e.fecha <= fin && aplica(e, c)).sort((a,b) => a.fecha.localeCompare(b.fecha)).map(e => ({key:'e_'+e.id, nombre:e.nombre, fecha:e.fecha, tipo:esOcasional(e) ? 'ocasional' : 'evento', mes:e.fecha.slice(0,7)}))
-  ];
+/* ============================ Actividades: modelo simple ============================ */
+const DATOS = {numero:'Número de veces', sino:'Sí o no'};
+const TOTALES = {suma:'Suma de todas las veces', media_semana:'Media por semana', chicos:'Nº de chicos que han ido'};
+const TOT_CORTO = {suma:'total', media_semana:'media por semana', chicos:'chicos que han ido'};
+const esAct = e => e.v === 2;
+const actividades = c => S.eventos.filter(e => esAct(e) && (!c || aplica(e, c))).sort(porOrden);
+const etiq = a => a.abrev || a.nombre;
+const kAct = a => 'n_' + a.id;
+const num = (chico, m, a) => { const v = (S.reg[chico+'_'+m] || {})[kAct(a)]; return typeof v === 'number' ? v : 0; };
+const periodoDe = (a, m) => a.periodo === 'trimestre' ? mesesTrim(m).filter(x => x <= m) : [m];
+const hechoPeriodo = (a, x, m) => periodoDe(a, m).reduce((t, mm) => t + num(x.id, mm, a), 0);
+const leToca = (a, x) => !!a.esperado && (!a.grupo || x.grupo === a.grupo);
+const cumple = (a, x, m) => a.esperado ? hechoPeriodo(a, x, m) >= a.esperado : null;
+function totalAct(a, ch, meses){
+  const cc = ch.filter(x => aplica(a, x.curso)); meses = meses.filter(m => m <= hoyMes()); if(!meses.length) return null;
+  if(a.total === 'chicos') return cc.filter(x => meses.some(m => num(x.id, m, a) > 0)).length;
+  const s = cc.reduce((t, x) => t + meses.reduce((u, m) => u + num(x.id, m, a), 0), 0);
+  if(a.total === 'media_semana'){ const w = meses.reduce((t, m) => t + semanasMes(m).length, 0); return w ? Math.round(s / w * 10) / 10 : null; }
+  return s;
 }
-function columnasMes(c, m){
-  const fe = eventosMes(c, m);
-  return [
-    ...acciones([c], [m]).map(a => ({key:'a_'+a.id, nombre:a.nombre, tipo:'accion', mes:m})),
-    ...S.eventos.filter(e => activaTrim(e, m) && aplica(e, c)).sort(porOrden).map(e => ({key:'t_'+e.id, nombre:e.nombre, tipo:'trim', mes:mesInicioTrim(m), sub:textoTrim(m)})),
-    ...semanalesMes(c, m).map(e => ({key:'g_'+e.id, nombre:e.nombre, tipo:'agregado', ev:e, mes:m, sub:AGREG_CORTO[e.agregacion || 'suma']})),
-    ...fe.filter(esOcasional).map(e => ({key:'e_'+e.id, nombre:e.nombre, fecha:e.fecha, tipo:'ocasional', mes:m})),
-    ...fe.filter(e => !esOcasional(e)).map(e => ({key:'e_'+e.id, nombre:e.nombre, fecha:e.fecha, tipo:'evento', mes:m})),
-    ...S.eventos.filter(e => anualSinFecha(e) && aplica(e, c)).sort(porNombre).map(e => ({key:'y_'+e.id, nombre:e.nombre, tipo:'anualsf', mes:mesAnualSF(m), sub:'Este curso'}))
-  ];
-}function ctrlSemana(){ return `<div class="mesnav"><button class="icono" data-a="semana" data-d="-1" aria-label="Semana anterior">‹</button><span class="mes-label">${textoSemana(S.semana)}</span><button class="icono" data-a="semana" data-d="1" aria-label="Semana siguiente">›</button></div>`; }
-function vistaSeguimiento(){
-  const cursos = cursosSel(); let filtro;
-  if(!esAdmin()){
-    filtro = `<div class="seg" role="group" aria-label="Qué chicos ver">
-      <button class="${S.filtro==='mios'?'on':''}" data-a="filtro" data-v="mios" aria-pressed="${S.filtro==='mios'}">Mis chicos</button>
-      <button class="${S.filtro==='curso'?'on':''}" data-a="filtro" data-v="curso" aria-pressed="${S.filtro==='curso'}">Todo el curso</button></div>`;
-  } else {
-    const rs = cursos.flatMap(responsablesDe);
-    filtro = `<label class="sel"><span class="vh">Preceptor</span><select data-ch="filtroResp"><option value="todos">Todos los preceptores</option>${
-      rs.map(r => `<option value="${r.id}" ${S.filtroResp===r.id?'selected':''}>${esc(r.nombre)}${r.curso ? ` (${cortoCurso(r.curso)})` : ''}</option>`).join('')}
-      <option value="sin" ${S.filtroResp==='sin'?'selected':''}>Sin preceptor</option></select></label>`;
-  }
-  const modo = `<div class="seg" role="group" aria-label="Periodo">
-    <button class="${S.modo==='semana'?'on':''}" data-a="modo" data-v="semana" aria-pressed="${S.modo==='semana'}">Semana</button>
-    <button class="${S.modo==='mes'?'on':''}" data-a="modo" data-v="mes" aria-pressed="${S.modo==='mes'}">Mes</button></div>`;
-  const tablas = cursos.map(c => S.modo === 'semana' ? tablaCurso(c, columnasSemana(c, S.semana), 'semana') : tablaCurso(c, columnasMes(c, S.mes), 'mes')).filter(Boolean).join('');
-  const ayuda = S.modo === 'semana'
-    ? 'Marca la asistencia de esta semana. Toca para poner o quitar el ✓. Sin ✓ significa que no asistió.'
-    : 'Toca para poner o quitar el ✓. Sin ✓ significa que no se hizo. Las semanales se marcan en la vista Semana; aquí ves su cómputo del mes.';
-  const vistaSel = `<div class="seg" role="group" aria-label="Presentación"><button class="${S.vista==='fichas'?'on':''}" data-a="vistaTipo" data-v="fichas" aria-pressed="${S.vista==='fichas'}">Fichas</button><button class="${S.vista==='tabla'?'on':''}" data-a="vistaTipo" data-v="tabla" aria-pressed="${S.vista==='tabla'}">Tabla</button></div>`;
-  return `<div class="barra">${modo}${S.modo === 'semana' ? ctrlSemana() : ctrlMes()}${ctrlCurso()}${filtro}${vistaSel}</div>
-    <p class="ayuda">${ayuda}</p>${tablas || vacio('Ningún chico coincide con este filtro.')}`;
+function cumplen(a, ch, m){ const cc = ch.filter(x => aplica(a, x.curso) && leToca(a, x)); if(!a.esperado || !cc.length) return null; const k = cc.filter(x => cumple(a, x, m)).length; return {k, n:cc.length, p:pct(k, cc.length)}; }
+const colorP = p => p === null || p === undefined ? 'neutro' : p >= 80 ? 'ok' : p >= 50 ? 'medio' : 'bajo';
+function iniciales(n){ const p = String(n || '').trim().split(/\s+/).filter(Boolean); return (p.length > 1 ? p.map(w => w[0]).join('') : (p[0] || '').slice(0,3)).toUpperCase().slice(0,3); }
+function estadoChico(x, m){ const acts = actividades(x.curso).filter(a => leToca(a, x)); if(!acts.length) return null; const k = acts.filter(a => cumple(a, x, m)).length; return k === acts.length ? 'ok' : k * 2 >= acts.length ? 'medio' : 'bajo'; }
+const faltan = (x, m) => actividades(x.curso).filter(a => leToca(a, x)).map(a => { const s = hechoPeriodo(a, x, m); return s < a.esperado ? `${etiq(a)} ${a.esperado - s}` : null; }).filter(Boolean);
+function alertas(ch, m){
+  const prev = mesMas(m, -1);
+  const sinNada = ch.filter(x => { const acts = actividades(x.curso); return acts.length && !acts.some(a => num(x.id, m, a) > 0 || num(x.id, prev, a) > 0); });
+  const trim = actividades().filter(a => a.esperado && a.periodo === 'trimestre');
+  const pend = ch.map(x => ({x, f:trim.filter(a => aplica(a, x.curso) && leToca(a, x) && !cumple(a, x, m)).map(a => a.nombre)})).filter(z => z.f.length);
+  return {sinNada, pend, prev};
 }
-function tablaCurso(c, cols, modo){
-  let ch = chicosDe(c);
-  const ids = new Set(responsablesDe(c).map(r => r.id));
-  if(!esAdmin() && S.filtro === 'mios') ch = ch.filter(x => x.responsable === S.profile.id);
-  if(esAdmin() && S.filtroResp !== 'todos'){
-    ch = S.filtroResp === 'sin' ? ch.filter(x => !ids.has(x.responsable)) : ch.filter(x => x.responsable === S.filtroResp);
-    if(!ch.length) return '';
-  }
-  const cab = cabBloque(c, `<span class="meta">${ch.length} ${ch.length===1?'chico':'chicos'}</span>`);
-  if(!ch.length) return `<section class="bloque">${cab}${vacio(!esAdmin() && S.filtro==='mios' ? 'Todavía no tienes chicos asignados. Asígnatelos en la pestaña Chicos o mira «Todo el curso».' : 'Este curso no tiene chicos. Añádelos en la pestaña Chicos.')}</section>`;
-  if(!cols.length) return `<section class="bloque">${cab}${vacio(modo === 'semana' ? `No hay actividades esta semana para ${cursoNombre(c)}.` : 'No hay columnas este mes.')}</section>`;
-  if(S.vista === 'fichas') return `<section class="bloque">${cab}${fichasCurso(ch, cols, ids)}</section>`;
-  const gr = []; cols.forEach((col,i) => { if(!gr.length || gr[gr.length-1].tipo !== col.tipo){ gr.push({tipo:col.tipo, n:0}); col.ini = i > 0; } gr[gr.length-1].n++; });
-  const th = col => `<th scope="col" class="col ${col.tipo} ${col.ini?'ini':''}"><span class="col-nom">${esc(col.nombre)}</span>${col.fecha ? `<span class="col-fecha">${fechaCorta(col.fecha)}</span>` : col.sub ? `<span class="col-fecha">${esc(col.sub)}</span>` : ''}</th>`;
-  const celda = (x, col) => {
-    const ini = col.ini ? ' class="ini"' : '';
-    if(col.tipo === 'agregado'){ const r = agregado(x.id, col.ev, col.mes); return `<td${ini}><span class="agr" title="${r.si} de ${r.n} semanas">${r.txt}</span></td>`; }
-    const v = valor(x.id, col.mes, col.key); const est = v==='si' ? 'hecho' : 'no hecho';
-    return `<td${ini}><button class="celda ${v}" data-a="marcar" data-chico="${x.id}" data-key="${col.key}" data-mes="${col.mes}" data-foco="${x.id}|${col.key}" aria-label="${esc(x.nombre)}, ${esc(col.nombre)}: ${est}">${v==='si'?'✓':''}</button></td>`;
-  };
-  const filas = ch.map(x => `<tr><th scope="row" class="nom"><span>${esc(x.nombre)}</span><small>${esc(ids.has(x.responsable) ? nombreUsuario(x.responsable) : 'Sin preceptor')}</small></th>${cols.map(col => celda(x,col)).join('')}</tr>`).join('');
-  const pie = `<tr><th scope="row" class="nom">Total</th>${cols.map(col => {
-    const ini = col.ini ? ' class="ini"' : '';
-    if(col.tipo === 'agregado') return `<td${ini}>${agregadoCurso(ch, col.ev, col.mes).txt}</td>`;
-    const r = cuenta(ch, col.mes, col.key); return `<td${ini}>${r.si}/${r.total}</td>`; }).join('')}</tr>`;
-  return `<section class="bloque">${cab}<div class="tabla-wrap" data-scroll="seg-${c}"><table class="tabla">
-    <thead><tr><th class="nom grupo" rowspan="2" scope="col">Chico</th>${gr.map((g,i) => `<th class="grupo ${g.tipo} ${i?'ini':''}" colspan="${g.n}" scope="colgroup">${GRUPO_TXT[g.tipo]}</th>`).join('')}</tr>
-    <tr>${cols.map(th).join('')}</tr></thead><tbody>${filas}</tbody><tfoot>${pie}</tfoot></table></div></section>`;
+function panelAlertas(al, m, conPrecep){
+  if(!al.sinNada.length && !al.pend.length) return '';
+  const quien = x => esc(x.nombre) + (conPrecep && x.responsable ? ` (${esc(iniciales(nombreUsuario(x.responsable)))})` : '');
+  return `<details class="bloque alerta no-print" open><summary>Para ayudar a los chicos</summary>
+    ${al.sinNada.length ? `<p><b>Sin ninguna actividad en ${MESES[+al.prev.slice(5)-1]} ni en ${MESES[+m.slice(5)-1]} (${al.sinNada.length}):</b> ${al.sinNada.map(quien).join(', ')}. Quizá convenga hablar con ellos o con sus padres.</p>` : ''}
+    ${al.pend.length ? `<p><b>Pendiente este trimestre:</b> ${al.pend.map(z => `${quien(z.x)}: ${esc(z.f.join(', ').toLowerCase())}`).join('; ')}.</p>` : ''}</details>`;
 }
 
-function fichasCurso(ch, cols, ids){
-  return `<ul class="fichas">${ch.map(x => `<li class="ficha"><div class="ficha-cab"><b>${esc(x.nombre)}</b><small>${esc(ids.has(x.responsable) ? nombreUsuario(x.responsable) : 'Sin preceptor')}${x.grupo ? '. ' + GRUPOS_CH[x.grupo] : ''}</small></div><div class="ficha-chips">${cols.map(col => {
-    if(col.tipo === 'agregado'){ const r = agregado(x.id, col.ev, col.mes); return `<span class="chip-dato">${esc(col.nombre)}: <b>${r.txt}</b></span>`; }
-    const v = valor(x.id, col.mes, col.key);
-    return `<button class="chip-m ${v}" data-a="marcar" data-chico="${x.id}" data-key="${col.key}" data-mes="${col.mes}" data-foco="${x.id}|${col.key}" aria-pressed="${v==='si'}">${v==='si' ? '✓ ' : ''}${esc(col.nombre)}${col.fecha ? ` <small>${fechaCorta(col.fecha)}</small>` : ''}</button>`; }).join('')}</div></li>`).join('')}</ul>`;
+/* ============================ Acompañamiento ============================ */
+function chicosFiltrados(c){
+  let ch = chicosDe(c);
+  if(!esAdmin() && S.filtro === 'mios') ch = ch.filter(x => x.responsable === S.profile.id);
+  if(esAdmin() && S.filtroResp !== 'todos'){ const ids = new Set(responsablesDe(c).map(r => r.id)); ch = S.filtroResp === 'sin' ? ch.filter(x => !ids.has(x.responsable)) : ch.filter(x => x.responsable === S.filtroResp); }
+  return ch;
 }
+function filtroPreceptor(){
+  const cursos = cursosSel();
+  if(!esAdmin()) return `<div class="seg" role="group" aria-label="Qué chicos ver"><button class="${S.filtro==='mios'?'on':''}" data-a="filtro" data-v="mios" aria-pressed="${S.filtro==='mios'}">Mis chicos</button><button class="${S.filtro==='curso'?'on':''}" data-a="filtro" data-v="curso" aria-pressed="${S.filtro==='curso'}">Todo el curso</button></div>`;
+  const rs = [...new Map(cursos.flatMap(responsablesDe).map(r => [r.id, r])).values()].sort(porNombre);
+  return `<label class="sel"><span class="vh">Preceptor</span><select data-ch="filtroResp"><option value="todos">Todos los preceptores</option>${rs.map(r => `<option value="${r.id}" ${S.filtroResp===r.id?'selected':''}>${esc(r.nombre)}${r.rol === 'responsable' && cursos.length > 1 ? ` (${cortoCurso(r.curso)})` : ''}</option>`).join('')}<option value="sin" ${S.filtroResp==='sin'?'selected':''}>Sin preceptor</option></select></label>`;
+}
+function vistaSeguimiento(){
+  const cursos = cursosSel();
+  const vistaSel = `<div class="seg" role="group" aria-label="Presentación"><button class="${S.vista==='fichas'?'on':''}" data-a="vistaTipo" data-v="fichas" aria-pressed="${S.vista==='fichas'}">Fichas</button><button class="${S.vista==='tabla'?'on':''}" data-a="vistaTipo" data-v="tabla" aria-pressed="${S.vista==='tabla'}">Tabla</button></div>`;
+  const ch = cursos.flatMap(chicosFiltrados);
+  const bloques = cursos.map(bloqueCurso).filter(Boolean).join('');
+  return `<div class="barra">${ctrlMes()}${ctrlCurso()}${filtroPreceptor()}${vistaSel}</div>
+    <p class="ayuda">Apunta cuántas veces ha hecho cada chico cada actividad este mes. El punto junto al nombre indica si va al día con lo esperado: verde, sí; ámbar, en parte; rojo, no.</p>
+    ${panelAlertas(alertas(ch, S.mes), S.mes, esAdmin() || S.filtro === 'curso')}${bloques || vacio('Ningún chico coincide con este filtro.')}`;
+}
+function bloqueCurso(c){
+  const ch = chicosFiltrados(c); const acts = actividades(c); const ids = new Set(responsablesDe(c).map(r => r.id));
+  if(esAdmin() && S.filtroResp !== 'todos' && !ch.length) return '';
+  const cab = cabBloque(c, `<span class="meta">${ch.length} ${ch.length === 1 ? 'chico' : 'chicos'}</span>`);
+  if(!ch.length) return `<section class="bloque">${cab}${vacio(!esAdmin() && S.filtro === 'mios' ? 'Todavía no tienes chicos asignados. Asígnatelos en la pestaña Chicos o mira «Todo el curso».' : 'Este curso no tiene chicos. Añádelos en la pestaña Chicos.')}</section>`;
+  if(!acts.length) return `<section class="bloque">${cab}${vacio(esAdmin() ? 'No hay actividades. Créalas en la pestaña Actividades.' : 'El administrador todavía no ha creado las actividades.')}</section>`;
+  const pre = x => ids.has(x.responsable) ? iniciales(nombreUsuario(x.responsable)) : '—';
+  if(S.vista === 'fichas') return `<section class="bloque">${cab}<ul class="fichas">${ch.map(x => fichaChico(x, acts, pre(x))).join('')}</ul></section>`;
+  const th = a => `<th scope="col" class="col"><span class="col-nom">${esc(etiq(a))}</span>${a.esperado ? `<span class="col-fecha">${a.esperado} al ${a.periodo === 'trimestre' ? 'trim.' : 'mes'}</span>` : ''}</th>`;
+  const celda = (x, a) => { const n = num(x.id, S.mes, a);
+    if(a.dato === 'sino') return `<td><button class="celda ${n > 0 ? 'si' : ''}" data-a="toggleAct" data-chico="${x.id}" data-act="${a.id}" data-foco="${x.id}|${a.id}" aria-label="${esc(x.nombre)}, ${esc(a.nombre)}: ${n > 0 ? 'sí' : 'no'}">${n > 0 ? '✓' : ''}</button></td>`;
+    const max = Math.max(10, (a.esperado || 0) * 2, n);
+    return `<td><select class="num ${a.esperado && cumple(a, x, S.mes) ? 'ok' : ''}" data-ch="num" data-chico="${x.id}" data-act="${a.id}" data-foco="${x.id}|${a.id}" aria-label="${esc(x.nombre)}, ${esc(a.nombre)}">${Array.from({length:max + 1}, (_, i) => `<option value="${i}" ${i === n ? 'selected' : ''}>${i || ''}</option>`).join('')}</select></td>`; };
+  const filas = ch.map(x => { const e = estadoChico(x, S.mes); return `<tr><th scope="row" class="nom"><span>${e ? `<i class="dot ${e}" aria-hidden="true"></i>` : ''}${esc(x.nombre)}</span><small>${esc(pre(x))}</small></th>${acts.map(a => celda(x, a)).join('')}</tr>`; }).join('');
+  const pie = `<tr><th scope="row" class="nom">Total</th>${acts.map(a => `<td title="${TOT_CORTO[a.total || 'suma']}">${fmt(totalAct(a, ch, [S.mes]))}</td>`).join('')}</tr>`;
+  return `<section class="bloque">${cab}<div class="tabla-wrap" data-scroll="seg-${c}"><table class="tabla"><thead><tr><th class="nom" scope="col">Chico</th>${acts.map(th).join('')}</tr></thead><tbody>${filas}</tbody><tfoot>${pie}</tfoot></table></div>
+    <p class="nota">Total: en media por semana se divide la suma entre las semanas del mes; en las demás, suma o nº de chicos que han ido, según cada actividad.</p></section>`;
+}
+function fichaChico(x, acts, pre){
+  const e = estadoChico(x, S.mes); const f = faltan(x, S.mes);
+  return `<li class="ficha"><div class="ficha-cab"><b>${e ? `<i class="dot ${e}" aria-hidden="true"></i>` : ''}${esc(x.nombre)}</b><small>${esc(pre)}${x.grupo ? '. ' + GRUPOS_CH[x.grupo] : ''}</small></div>
+    ${f.length ? `<p class="falta">Le falta: ${esc(f.join(', '))}</p>` : ''}
+    <div class="acts">${acts.map(a => { const n = num(x.id, S.mes, a);
+      if(a.dato === 'sino') return `<button class="chip-m ${n > 0 ? 'si' : ''}" data-a="toggleAct" data-chico="${x.id}" data-act="${a.id}" data-foco="${x.id}|${a.id}" aria-pressed="${n > 0}">${n > 0 ? '✓ ' : ''}${esc(a.nombre)}</button>`;
+      return `<div class="paso"><span>${esc(a.nombre)}${a.esperado ? `<small>esperado: ${a.esperado} al ${a.periodo === 'trimestre' ? 'trimestre' : 'mes'}</small>` : ''}</span><button class="icono" data-a="paso" data-d="-1" data-chico="${x.id}" data-act="${a.id}" data-foco="${x.id}|${a.id}|-" aria-label="Una menos de ${esc(a.nombre)}" ${n ? '' : 'disabled'}>−</button><b class="${a.esperado && cumple(a, x, S.mes) ? 'ok' : ''}">${n}</b><button class="icono" data-a="paso" data-d="1" data-chico="${x.id}" data-act="${a.id}" data-foco="${x.id}|${a.id}|+" aria-label="Una más de ${esc(a.nombre)}">+</button></div>`; }).join('')}</div></li>`;
+}
+async function ponerNum(chicoId, actId, n){
+  const c = S.chicos.find(x => x.id === chicoId); const a = S.eventos.find(e => e.id === actId); if(!c || !a) return;
+  n = Math.max(0, Math.min(99, n | 0)); const m = S.mes;
+  await guardar(() => DB.set('registros', chicoId + '_' + m, {chicoId, curso:c.curso, mes:m, marcas:{[kAct(a)]:n}}, true));
+}
+
 /* ============================ Chicos ============================ */
 function opcionesResp(c, sel){ return `<option value="">Sin preceptor</option>` + responsablesDe(c).map(r => `<option value="${r.id}" ${r.id===sel?'selected':''}>${esc(r.nombre)}</option>`).join(''); }
 function vistaChicos(){
@@ -805,7 +829,7 @@ function vistaChicos(){
         <button class="btn sec peq" data-a="editarChico" data-id="${x.id}">Editar</button></li>`; }).join('');
     return `<section class="bloque">${cabBloque(c, `<span class="meta">${ch.length} chicos${reparto ? '. ' + reparto : ''}</span>`)}
       ${ch.length ? `<ul class="lista">${items}</ul>` : vacio('Sin chicos todavía. Añade el primero con el formulario de arriba.')}
-      ${esAdmin() && bajas.length ? `<details class="bajas"><summary>Dados de baja (${bajas.length})</summary><ul class="lista">${bajas.map(x => `<li><span class="li-nom">${esc(x.nombre)}</span><button class="btn sec peq" data-a="reactivar" data-id="${x.id}">Reactivar</button></li>`).join('')}</ul></details>` : ''}
+      ${esAdmin() && bajas.length ? `<details class="bajas"><summary>Dados de baja (${bajas.length})</summary><ul class="lista">${bajas.map(x => `<li><span class="li-nom">${esc(x.nombre)}</span><button class="btn sec peq" data-a="reactivar" data-id="${x.id}">Reactivar</button><button class="btn sec peq" data-a="borrarChico" data-id="${x.id}">Eliminar</button></li>`).join('')}</ul></details>` : ''}
     </section>`;
   };
   return `<div class="barra">${ctrlCurso()}</div>${form}
@@ -813,154 +837,44 @@ function vistaChicos(){
     ${cursosSel().map(lista).join('')}`;
 }
 
-/* ============================ Resumen del mes ============================ */
-function semanalTotales(chicos, cursos, m){ let si = 0, tot = 0; cursos.forEach(c => { const cc = chicos.filter(x => x.curso === c); semanalesMes(c, m).forEach(e => { const n = semanasComputables(e, m).length; cc.forEach(x => { si += agregado(x.id, e, m).si; }); tot += n * cc.length; }); }); return pct(si, tot); }
-function vistaResumen(){
-  const cursos = cursosSel();
-  return `<div class="barra">${ctrlMes()}${ctrlCurso()}<button class="btn" data-a="excel">Descargar Excel del mes</button></div>
-    ${cursos.length > 1 ? resumenGlobal(cursos) : ''}${cursos.map(resumenCurso).join('')}`;
-}
-function resumenGlobal(cursos){
-  const acc = acciones(cursos, [S.mes]); let tCh = [];
-  const filas = cursos.map(c => { const ch = chicosDe(c); tCh = tCh.concat(ch);
-    const ps = semanalTotales(ch, [c], S.mes);
-    return `<tr><td>${cursoNombre(c)}</td><td class="n">${ch.length}</td>${acc.map(a => { const r = cuentaMensual(a, ch, S.mes); const p = pct(r.si, r.total); return `<td class="n">${r.total ? `${r.si}/${r.total} (${pctTxt(p)})` : '—'}</td>`; }).join('')}<td class="n">${pctTxt(asistenciaMedia(ch, eventosMes(c,S.mes), S.mes))}</td><td class="n">${pctTxt(ps)}${barraMini(ps)}</td></tr>`; }).join('');
-  let siE = 0, totE = 0; cursos.forEach(c => eventosMes(c, S.mes).forEach(e => { const r = cuenta(chicosDe(c), S.mes, 'e_'+e.id); siE += r.si; totE += r.total; }));
-  const tot = `<tr><th>Total</th><td class="n"><b>${tCh.length}</b></td>${acc.map(a => { const r = cuentaMensual(a, tCh, S.mes); return `<td class="n"><b>${r.si}/${r.total} (${pctTxt(pct(r.si,r.total))})</b></td>`; }).join('')}<td class="n"><b>${pctTxt(pct(siE,totE))}</b></td><td class="n"><b>${pctTxt(semanalTotales(tCh, cursos, S.mes))}</b></td></tr>`;
-  return `<section class="bloque"><div class="bloque-cab"><h2>Todos los cursos</h2><span class="meta">${cap(mesLargo(S.mes))}</span></div><div class="envoltura"><table class="datos">
-    <thead><tr><th>Curso</th><th>Chicos</th>${acc.map(a => `<th>${esc(a.nombre)}</th>`).join('')}<th>Actividades anuales</th><th>Asistencia semanal</th></tr></thead><tbody>${filas}${tot}</tbody></table></div>
-    <p class="nota">Asistencia semanal: porcentaje de semanas asistidas sobre el total de semanas transcurridas, sumando todas las actividades semanales.</p></section>`;
-}
-function resumenCurso(c){
-  const ch = chicosDe(c); const acc = acciones([c], [S.mes]); const evs = eventosMes(c, S.mes); const sems = semanalesMes(c, S.mes);
-  if(!ch.length) return `<section class="bloque">${cabBloque(c)}${vacio('Este curso no tiene chicos.')}</section>`;
-  const filasCol = columnasMes(c, S.mes).filter(k => k.tipo !== 'agregado').map(col => { const r = cuenta(ch, col.mes, col.key); const p = pct(r.si, r.total);
-    return `<tr><td>${esc(col.nombre)}${col.fecha ? ` <span class="meta">(${fechaCorta(col.fecha)})</span>` : ''}</td><td class="n">${r.si}</td><td class="n">${r.total - r.si}</td><td class="n">${pctTxt(p)}${barraMini(p)}</td></tr>`; }).join('');
-  const filasSem = sems.map(e => { const r = agregadoCurso(ch, e, S.mes);
-    return `<tr><td>${esc(e.nombre)}</td><td class="n">${semanasComputables(e, S.mes).length}</td><td>${esc(r.largo || r.txt)}${r.p !== null ? barraMini(r.p) : ''}</td></tr>`; }).join('');
-  const gs = grupos(c);
-  const filasResp = gs.map(g => `<tr><td>${esc(g.nombre)}</td><td class="n">${g.chicos.length}</td>${acc.map(a => { const r = cuentaMensual(a, g.chicos, S.mes); return `<td class="n">${r.si}/${r.total}</td>`; }).join('')}<td class="n">${pctTxt(asistenciaMedia(g.chicos, evs, S.mes))}</td>${sems.map(e => `<td class="n">${agregadoCurso(g.chicos, e, S.mes).txt}</td>`).join('')}</tr>`).join('');
-  const a0 = acc.find(a => a.id === 'tutoria') || acc.find(a => /tutor/i.test(a.nombre)) || acc[0];
-  const pend = a0 ? ch.filter(x => valor(x.id, S.mes, 'a_'+a0.id) !== 'si') : [];
-  return `<section class="bloque">${cabBloque(c, `<span class="meta">${ch.length} chicos</span>`)}
-    <div class="envoltura"><table class="datos"><thead><tr><th>Actividad</th><th>Sí</th><th>No</th><th>Porcentaje</th></tr></thead><tbody>${filasCol}</tbody></table></div>
-    ${sems.length ? `<h3 style="font-size:1rem;margin:1.1rem 0 .4rem">Actividades semanales</h3><div class="envoltura"><table class="datos"><thead><tr><th>Actividad</th><th>Semanas</th><th>Resultado del curso</th></tr></thead><tbody>${filasSem}</tbody></table></div>` : ''}
-    <h3 style="font-size:1rem;margin:1.1rem 0 .4rem">Por preceptor</h3>
-    <div class="envoltura"><table class="datos"><thead><tr><th>Preceptor</th><th>Chicos</th>${acc.map(a => `<th>${esc(a.nombre)}</th>`).join('')}<th>Actividades anuales</th>${sems.map(e => `<th>${esc(e.nombre)}</th>`).join('')}</tr></thead><tbody>${filasResp}</tbody></table></div>
-    ${a0 && pend.length ? `<div class="pendientes"><b>Sin ${esc(a0.nombre.toLowerCase())} marcada este mes (${pend.length}):</b> ${pend.map(x => esc(x.nombre)).join(', ')}</div>` : ''}
-  </section>`;
-}
-function exportarExcel(){
-  if(typeof XLSX === 'undefined'){ toast('No se pudo cargar el generador de Excel. Revisa la conexión.'); return; }
-  const cursos = cursosSel(); const acc = acciones(cursosSel(), [S.mes]); const wb = XLSX.utils.book_new(); const m = S.mes;
-  const res = [['E6 Mizar. Resumen de ' + mesLargo(m)], [], ['Curso','Chicos', ...acc.map(a => a.nombre + ' (%)'), 'Actividades anuales del mes', 'Asistencia media a actividades anuales (%)', 'Asistencia semanal (%)']];
-  cursos.forEach(c => { const ch = chicosDe(c); const evs = eventosMes(c, m);
-    res.push([cursoNombre(c), ch.length, ...acc.map(a => { const r = cuentaMensual(a, ch, m); return pct(r.si, r.total) ?? ''; }), evs.length, asistenciaMedia(ch, evs, m) ?? '', semanalTotales(ch, [c], m) ?? '']); });
-  res.push([], ['Actividades semanales'], ['Curso','Actividad','Cómputo','Semanas','Resultado']);
-  cursos.forEach(c => semanalesMes(c, m).forEach(e => { const r = agregadoCurso(chicosDe(c), e, m); res.push([cursoNombre(c), e.nombre, AGREG[e.agregacion || 'suma'], semanasComputables(e, m).length, r.largo || r.txt]); }));
-  res.push([], ['Por preceptor'], ['Curso','Preceptor','Chicos', ...acc.map(a => a.nombre + ' (realizadas)'), 'Asistencia media a actividades anuales (%)']);
-  cursos.forEach(c => grupos(c).forEach(g => res.push([cursoNombre(c), g.nombre, g.chicos.length, ...acc.map(a => cuentaMensual(a, g.chicos, m).si), asistenciaMedia(g.chicos, eventosMes(c,m), m) ?? ''])));
-  res.push([], ['Actividades anuales'], ['Curso','Actividad','Fecha','Asistieron','No asistieron','Asistencia (%)']);
-  cursos.forEach(c => eventosMes(c, m).forEach(e => { const r = cuenta(chicosDe(c), m, 'e_'+e.id); res.push([cursoNombre(c), e.nombre, fechaLarga(e.fecha), r.si, r.total - r.si, pct(r.si, r.total) ?? '']); }));
-  const h = XLSX.utils.aoa_to_sheet(res); h['!cols'] = [{wch:18},{wch:24},{wch:20},{wch:16},{wch:16},{wch:14},{wch:16}];
-  XLSX.utils.book_append_sheet(wb, h, 'Resumen');
-  cursos.forEach(c => {
-    const cols = columnasMes(c, m).filter(k => k.tipo !== 'agregado');
-    semanalesMes(c, m).forEach(e => {
-      semanasMes(m).filter(l => activa(e, l)).forEach(l => cols.push({nombre:`${e.nombre} (${semanaCorta(l)})`, key:`s_${e.id}_${l}`, mes:m}));
-      cols.push({nombre:`${e.nombre}: cómputo del mes (${AGREG_CORTO[e.agregacion || 'suma'].toLowerCase()})`, agr:e});
-    });
-    const aoa = [['Chico','Preceptor', ...cols.map(k => k.fecha ? `${k.nombre} (${fechaCorta(k.fecha)})` : k.nombre)]];
-    chicosDe(c).forEach(x => aoa.push([x.nombre, nombreResp(x), ...cols.map(k => k.agr ? agregado(x.id, k.agr, m).num ?? '' : txtValor(valor(x.id, k.mes, k.key)))]));
-    const hc = XLSX.utils.aoa_to_sheet(aoa); hc['!cols'] = [{wch:22},{wch:18}, ...cols.map(() => ({wch:16}))];
-    XLSX.utils.book_append_sheet(wb, hc, cursoNombre(c).replace(/[:\\/?*\[\]]/g,'').slice(0,31));
-  });
-  XLSX.writeFile(wb, `E6-Mizar-${m}.xlsx`);
-  toast('Excel descargado');
-}
-
 /* ============================ Informe ============================ */
-const MEDIDAS = {chicos:'Nº de chicos', 'ficha:circulo':'Nº de chicos de círculos (según su ficha)', 'ficha:charla':'Nº de chicos de charlas (según su ficha)', suma:'Suma de asistencias', distintos:'Nº de chicos que asistieron', media_semana:'Media de asistentes por semana'};
 const GRUPOS_CH = {circulo:'Círculos', charla:'Charlas'};
 const norm = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
-const FILAS_DEF = [
-  {id:'f1', etiqueta:'Nº de chicos', medida:'chicos'},
-  {id:'f2', etiqueta:'Asistentes a charlas', medida:'ficha:charla'},
-  {id:'f3', etiqueta:'Chicos que van a círculos', medida:'ficha:circulo'},
-  {id:'f4', etiqueta:'Visitas a los pobres (total)', fuente:'Visita de pobres', medida:'suma'},
-  {id:'f5', etiqueta:'Chicos que han dado catequesis', fuente:'Catequesis', medida:'distintos'},
-  {id:'f6', etiqueta:'Meditaciones: media de asistentes por semana', fuente:'Meditación', medida:'media_semana'},
-  {id:'f7', etiqueta:'Asistentes al retiro mensual', fuente:'Retiro mensual', medida:'distintos'},
-  {id:'f8', etiqueta:'Asistentes a curso de retiro', fuente:'Curso de retiro', medida:'distintos'},
-  {id:'f9', etiqueta:'Asistentes a convivencias', fuente:'Convivencia', medida:'distintos'},
-  {id:'f10', etiqueta:'Preceptuaciones', fuente:'Preceptuación', medida:'suma'},
-  {id:'f11', etiqueta:'Conversaciones con padres', fuente:'Hablado con padres', medida:'suma'}];
-const cfgInforme = () => S.config.find(d => d.id === 'informe') || {};
-const filasInforme = () => Array.isArray(cfgInforme().filas) ? cfgInforme().filas : FILAS_DEF;
-const eventosDeFuente = f => { const n = norm(f); if(!n) return []; return S.eventos.filter(e => { const x = norm(e.nombre); return x === n || x === n + 's' || n === x + 's'; }); };
-const fmt = v => v === null || v === undefined ? '—' : v.toLocaleString('es-ES');
-function marcasMes(x, e, m){
-  if(!aplica(e, x.curso)) return 0; const t = tipoDe(e);
-  if(t === 'semanal') return semanasComputables(e, m).filter(l => valor(x.id, m, `s_${e.id}_${l}`) === 'si').length;
-  if(t === 'mensual') return activaMes(e, m) && valor(x.id, m, 'a_'+e.id) === 'si' ? 1 : 0;
-  if(t === 'trimestral') return mesInicioTrim(m) === m && activaTrim(e, m) && valor(x.id, m, 't_'+e.id) === 'si' ? 1 : 0;
-  if(anualSinFecha(e)) return m === mesAnualSF(m) && valor(x.id, m, 'y_'+e.id) === 'si' ? 1 : 0;
-  return e.fecha && e.fecha.slice(0,7) === m && valor(x.id, m, 'e_'+e.id) === 'si' ? 1 : 0;
-}
-function semanasDe(evs, meses){ const r = []; meses.forEach(m => semanasMes(m).forEach(l => { if(l <= hoyISO() && evs.some(e => activa(e, l))) r.push({l, m}); })); return r; }
-function asistSemana(ch, evs, w){ return ch.filter(x => evs.some(e => aplica(e, x.curso) && activa(e, w.l) && valor(x.id, w.m, `s_${e.id}_${w.l}`) === 'si')).length; }
-function valorFila(f, ch, meses){
-  if(f.medida === 'chicos') return ch.length;
-  if(f.medida.startsWith('ficha:')) return ch.filter(x => x.grupo === f.medida.slice(6)).length;
-  const evs = eventosDeFuente(f.fuente); meses = meses.filter(m => m <= hoyMes()); if(!evs.length || !meses.length) return null;
-  if(f.medida === 'suma') return ch.reduce((s,x) => s + meses.reduce((a,m) => a + evs.reduce((b,e) => b + marcasMes(x, e, m), 0), 0), 0);
-  if(f.medida === 'distintos') return ch.filter(x => meses.some(m => evs.some(e => marcasMes(x, e, m) > 0))).length;
-  if(f.medida === 'media_semana'){ const ws = semanasDe(evs, meses); if(!ws.length) return null; return Math.round(ws.reduce((s,w) => s + asistSemana(ch, evs, w), 0) / ws.length * 10) / 10; }
-  return null;
+const fmt = v => v === null || v === undefined ? '—' : typeof v === 'number' ? v.toLocaleString('es-ES') : v;
+function filasInforme(cursos){
+  const acts = actividades().filter(a => cursos.some(c => aplica(a, c)));
+  const f = [{etiqueta:'Nº de chicos', calc:ch => ch.length}];
+  acts.forEach(a => {
+    f.push({etiqueta:`${a.nombre} (${TOT_CORTO[a.total || 'suma']})`, calc:(ch, ms) => totalAct(a, ch, ms)});
+    if(a.grupo) f.push({etiqueta:`De los chicos de ${GRUPOS_CH[a.grupo].toLowerCase()}, cuántos han ido a ${a.nombre.toLowerCase()} al menos una vez`, calc:(ch, ms) => { const g = ch.filter(x => x.grupo === a.grupo && aplica(a, x.curso)); ms = ms.filter(m => m <= hoyMes()); return ms.length ? `${g.filter(x => ms.some(m => num(x.id, m, a) > 0)).length} de ${g.length}` : null; }});
+  });
+  return f;
 }
 function vistaInforme(){
-  const cursos = cursosSel(); const ch = cursos.flatMap(chicosDe); const filas = filasInforme();
+  const cursos = cursosSel(); const ch = cursos.flatMap(chicosDe); const filas = filasInforme(cursos);
   const y = cursoEscolarDe(S.mes); const meses = mesesCurso(y); const ambito = cursos.length > 1 ? 'Todos los cursos' : cursoNombre(cursos[0]);
   const trim = S.periodo === 'trim'; const sel = trim ? mesesTrim(S.mes) : [S.mes]; const titulo = trim ? `Trimestre ${textoTrim(S.mes)} ${S.mes.slice(0,4)}` : cap(mesLargo(S.mes));
-  const cards = filas.map(f => {
-    const falta = f.fuente && !['chicos'].includes(f.medida) && !f.medida.startsWith('ficha:') && !eventosDeFuente(f.fuente).length;
-    let det = ''; if(f.medida === 'media_semana'){ const evs = eventosDeFuente(f.fuente); const ws = semanasDe(evs, sel); if(ws.length) det = `<small>${ws.map(w => `${semanaCorta(w.l)}: ${asistSemana(ch, evs, w)}`).join('; ')}</small>`; }
-    return `<li class="ind"><span>${esc(f.etiqueta)}${falta ? `<small class="aviso-f">No hay ninguna actividad llamada «${esc(f.fuente)}»</small>` : ''}${det}</span><b>${fmt(valorFila(f, ch, sel))}</b></li>`; }).join('');
+  const cards = filas.map(f => `<li class="ind"><span>${esc(f.etiqueta)}</span><b>${fmt(f.calc(ch, sel))}</b></li>`).join('');
   const tabla = (cols, celda, ultima, id) => `<div class="tabla-wrap" data-scroll="${id}"><table class="tabla hist"><thead><tr><th class="nom">Dato</th>${cols.map(c => `<th class="${c.on ? 'mes-act' : ''}">${c.t}</th>`).join('')}<th>${ultima}</th></tr></thead><tbody>${filas.map(f => `<tr><th class="nom" scope="row"><span>${esc(f.etiqueta)}</span></th>${cols.map(c => `<td class="${c.on ? 'mes-act' : ''}">${celda(f, c)}</td>`).join('')}<td><b>${celda(f, null)}</b></td></tr>`).join('')}</tbody></table></div>`;
-  const hist = tabla(meses.map(m => ({m, t:cap(MESES[+m.slice(5)-1].slice(0,3)), on:sel.includes(m)})), (f,c) => c ? (c.m > hoyMes() ? '' : fmt(valorFila(f, ch, [c.m]))) : fmt(valorFila(f, ch, meses)), 'Curso', 'hist');
-  const porCurso = cursos.length > 1 ? `<section class="bloque"><div class="bloque-cab"><h2>Por curso: ${titulo.toLowerCase()}</h2></div>${tabla(cursos.map(c => ({c, t:cortoCurso(c)})), (f,c) => fmt(valorFila(f, c ? chicosDe(c.c) : ch, sel)), 'Total', 'pc')}</section>` : '';
+  const hist = tabla(meses.map(m => ({m, t:cap(MESES[+m.slice(5)-1].slice(0,3)), on:sel.includes(m)})), (f, c) => c ? (c.m > hoyMes() ? '' : fmt(f.calc(ch, [c.m]))) : fmt(f.calc(ch, meses)), 'Curso', 'hist');
+  const porCurso = cursos.length > 1 ? `<section class="bloque"><div class="bloque-cab"><h2>Por curso: ${titulo.toLowerCase()}</h2></div>${tabla(cursos.map(c => ({c, t:cortoCurso(c)})), (f, c) => fmt(f.calc(c ? chicosDe(c.c) : ch, sel)), 'Total', 'pc')}</section>` : '';
   const per = `<div class="seg" role="group" aria-label="Periodo"><button class="${!trim?'on':''}" data-a="periodo" data-v="mes" aria-pressed="${!trim}">Mes</button><button class="${trim?'on':''}" data-a="periodo" data-v="trim" aria-pressed="${trim}">Trimestre</button></div>`;
   const ctrlP = trim ? `<div class="mesnav"><button class="icono" data-a="mes" data-d="-3" aria-label="Trimestre anterior">‹</button><span class="mes-label">${titulo}</span><button class="icono" data-a="mes" data-d="3" aria-label="Trimestre siguiente">›</button></div>` : ctrlMes();
   const prevT = mesMas(mesInicioTrim(hoyMes()), -3);
   const aviso = esAdmin() && [1,4,7,10].includes(+hoyMes().slice(5)) && !(trim && S.mes === prevT) ? `<div class="pendientes no-print" style="margin-bottom:1rem">Ya puedes revisar el informe del trimestre ${textoTrim(prevT)}. <button class="btn sec peq" data-a="verTrim">Ver informe trimestral</button></div>` : '';
-  return `${aviso}<div class="barra no-print">${per}${ctrlP}${ctrlCurso()}<button class="btn" data-a="excelInforme">Descargar Excel</button><button class="btn sec" data-a="imprimir">Imprimir o guardar PDF</button>${esAdmin() ? `<button class="btn sec" data-a="infEditar">${S.infEdit ? 'Terminar' : 'Configurar informe'}</button>` : ''}</div>
-    ${S.infEdit && esAdmin() ? panelInforme(filas) : ''}
+  return `${aviso}<div class="barra no-print">${per}${ctrlP}${ctrlCurso()}<button class="btn" data-a="excelInforme">Descargar Excel</button><button class="btn sec" data-a="imprimir">Imprimir o guardar PDF</button></div>
     <h1 class="solo-print">E6 Mizar. Informe: ${titulo}. ${ambito}</h1>
-    <section class="bloque"><div class="bloque-cab"><h2>${titulo}</h2><span class="meta">${ambito}</span></div><ul class="inds">${cards}</ul></section>
+    <section class="bloque"><div class="bloque-cab"><h2>${titulo}</h2><span class="meta">${ambito}</span></div>${filas.length > 1 ? `<ul class="inds">${cards}</ul>` : vacio('Crea las actividades en la pestaña Actividades para ver aquí sus datos.')}</section>
     <section class="bloque"><div class="bloque-cab"><h2>Histórico del curso ${y}-${String(y+1).slice(2)}</h2><span class="meta">${ambito}</span></div>${hist}
-      <p class="nota">«Curso» es el acumulado de septiembre a hoy; en las medias, la media de todas las semanas. El nº de chicos y los de círculos o charlas usan los datos actuales de las fichas.</p></section>${porCurso}`;
+      <p class="nota">«Curso» es el acumulado de septiembre a hoy. El nº de chicos y los grupos usan los datos actuales de las fichas. Los datos se calculan igual que la fila de totales de tu hoja: suma, media por semana o nº de chicos que han ido, según cada actividad.</p></section>${porCurso}`;
 }
-function panelInforme(filas){
-  const nombres = [...new Set(S.eventos.map(e => e.nombre))].sort((a,b) => a.localeCompare(b, 'es'));
-  return `<form class="panel no-print" data-f="informe"><h3>Datos del informe</h3><p class="nota" style="margin:0 0 .6rem">Cada fila es un dato. Elige qué medir y de qué actividad. Las ocasionales con el mismo nombre (por ejemplo, todas las convivencias) se suman.</p>
-    ${filas.map((f,i) => `<div class="campos fila-inf" data-id="${esc(f.id)}"><label>Nombre del dato<input name="et_${i}" value="${esc(f.etiqueta)}" maxlength="80"></label>
-      <label>Qué medir<select name="me_${i}">${Object.entries(MEDIDAS).map(([k,t]) => `<option value="${k}" ${f.medida === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
-      <label>Actividad<select name="fu_${i}"><option value="">—</option>${nombres.map(n => `<option value="${esc(n)}" ${norm(n) === norm(f.fuente) ? 'selected' : ''}>${esc(n)}</option>`).join('')}${f.fuente && !nombres.some(n => norm(n) === norm(f.fuente)) ? `<option value="${esc(f.fuente)}" selected>${esc(f.fuente)} (aún no existe)</option>` : ''}</select></label>
-      <span class="w-ctrl"><button type="button" class="icono" data-a="ifMover" data-i="${i}" data-d="-1" aria-label="Subir">↑</button><button type="button" class="icono" data-a="ifMover" data-i="${i}" data-d="1" aria-label="Bajar">↓</button><button type="button" class="btn sec peq" data-a="ifQuitar" data-i="${i}">Quitar</button></span></div>`).join('')}
-    <div class="campos" style="margin-top:.8rem"><button type="button" class="btn sec" data-a="ifAnadir">Añadir dato</button><button class="btn" type="submit">Guardar informe</button></div></form>`;
-}
-function leerFilasInforme(){
-  const f = document.querySelector('[data-f=informe]'); if(!f) return filasInforme().map(x => ({...x})); const fd = new FormData(f);
-  return [...f.querySelectorAll('.fila-inf')].map((el,i) => ({id:el.dataset.id, etiqueta:String(fd.get('et_'+i) || '').trim() || 'Dato', medida:fd.get('me_'+i), fuente:fd.get('fu_'+i) || ''}));
-}
-const guardarFilas = fs => guardar(() => DB.set('config', 'informe', {filas:fs}, true));
 function excelInforme(){
   if(typeof XLSX === 'undefined'){ toast('No se pudo cargar el generador de Excel. Revisa la conexión.'); return; }
-  const cursos = cursosSel(); const y = cursoEscolarDe(S.mes); const meses = mesesCurso(y); const filas = filasInforme(); const wb = XLSX.utils.book_new();
+  const cursos = cursosSel(); const y = cursoEscolarDe(S.mes); const meses = mesesCurso(y); const filas = filasInforme(cursos); const wb = XLSX.utils.book_new();
   const g = {}; meses.forEach(m => (g[mesInicioTrim(m)] = g[mesInicioTrim(m)] || []).push(m)); const trims = Object.entries(g);
   const hoja = ch => { const aoa = [['Dato', ...meses.map(m => cap(MESES[+m.slice(5)-1]) + ' ' + m.slice(0,4)), ...trims.map(([k]) => 'Trim. ' + textoTrim(k)), 'Curso escolar']];
-    filas.forEach(f => aoa.push([f.etiqueta, ...meses.map(m => m > hoyMes() ? '' : (valorFila(f, ch, [m]) ?? '')), ...trims.map(([k, ms]) => ms[0] > hoyMes() ? '' : (valorFila(f, ch, ms) ?? '')), valorFila(f, ch, meses) ?? '']));
-    const h = XLSX.utils.aoa_to_sheet(aoa); h['!cols'] = [{wch:46}, ...meses.map(() => ({wch:12})), {wch:14}]; return h; };
+    filas.forEach(f => aoa.push([f.etiqueta, ...meses.map(m => m > hoyMes() ? '' : (f.calc(ch, [m]) ?? '')), ...trims.map(([k, ms]) => ms[0] > hoyMes() ? '' : (f.calc(ch, ms) ?? '')), f.calc(ch, meses) ?? '']));
+    const h = XLSX.utils.aoa_to_sheet(aoa); h['!cols'] = [{wch:50}, ...meses.map(() => ({wch:12})), ...trims.map(() => ({wch:13})), {wch:14}]; return h; };
   const nom = c => cursoNombre(c).replace(/[:\\/?*\[\]]/g,'').slice(0,31);
   XLSX.utils.book_append_sheet(wb, hoja(cursos.flatMap(chicosDe)), cursos.length > 1 ? 'Total' : nom(cursos[0]));
   if(cursos.length > 1) cursos.forEach(c => XLSX.utils.book_append_sheet(wb, hoja(chicosDe(c)), nom(c)));
@@ -968,130 +882,52 @@ function excelInforme(){
 }
 
 /* ============================ Dashboard ============================ */
-const WTIPOS = {kpi:'Indicador: real frente a objetivo', evolucion:'Evolución mensual (líneas)', cursos:'Comparativa por cursos (barras)', responsables:'Comparativa por preceptores (barras)', chicos:'Detalle por chico (tabla)', anuales:'Asistencia a cada actividad con fecha (barras)'};
-const UNIDAD = {semanal:'semanas', mensual:'meses', trimestral:'trimestres', ocasional:'asistencias posibles', anual:'asistencias posibles'};
-const cfgDash = () => S.config.find(d => d.id === 'dashboard') || {};
-function variables(){
-  const cfg = cfgDash();
-  const vs = S.eventos.filter(e => esMensual(e) || esTrimestral(e) || esSemanal(e) || anualSinFecha(e)).sort(porOrden).map(e => ({id:e.id, nombre:e.nombre, tipo:tipoDe(e), evs:[e], objetivo:e.objetivo ?? null}));
-  const oc = {}; S.eventos.filter(esOcasional).forEach(e => (oc[e.nombre] = oc[e.nombre] || []).push(e));
-  Object.entries(oc).forEach(([n, evs]) => vs.push({id:'oc:' + n, nombre:n, tipo:'ocasional', evs, objetivo:(cfg.objOcasionales || {})[n] ?? null}));
-  const anu = S.eventos.filter(e => tipoDe(e) === 'anual' && e.fecha);
-  if(anu.length) vs.push({id:'__anuales', nombre:'Anuales con fecha (todas)', tipo:'anual', evs:anu, objetivo:cfg.objAnuales ?? null});
-  return vs;
+function gruposDash(){
+  const cursos = cursosSel();
+  if(S.dashPor !== 'preceptor') return cursos.map(c => ({nombre:cursoNombre(c), corto:cortoCurso(c), chicos:chicosDe(c), c}));
+  const ch = cursos.flatMap(chicosDe); const m = new Map();
+  ch.forEach(x => { const r = S.usuarios.find(u => u.id === x.responsable && u.activo !== false); const k = r ? r.id : '_sin'; if(!m.has(k)) m.set(k, {nombre:r ? r.nombre : 'Sin preceptor', corto:r ? iniciales(r.nombre) : '—', chicos:[]}); m.get(k).chicos.push(x); });
+  return [...m.values()].sort((a,b) => a.nombre === 'Sin preceptor' ? 1 : b.nombre === 'Sin preceptor' ? -1 : a.nombre.localeCompare(b.nombre, 'es'));
 }
-function tasaEv(e, chicos, meses){
-  const cc = chicos.filter(x => aplica(e, x.curso)); const t = tipoDe(e); let si = 0, tot = 0; const vistos = new Set();
-  const una = (mm, key) => { if(vistos.has(mm) || mm > hoyMes()) return; vistos.add(mm); tot += cc.length; cc.forEach(x => { if(valor(x.id, mm, key) === 'si') si++; }); };
-  meses.filter(m => m <= hoyMes()).forEach(m => {
-    if(t === 'semanal'){ const n = semanasComputables(e, m).length; if(!n) return; cc.forEach(x => { const r = agregado(x.id, e, m).si; if(e.porFrecuencia){ const cada = (x.cada || {})[e.id] ?? 1; if(!cada) return; const esp = Math.ceil(n / cada); tot += esp; si += Math.min(r, esp); } else { tot += n; si += r; } }); }
-    else if(t === 'mensual'){ if(activaMes(e, m)) una(m, 'a_'+e.id); }
-    else if(t === 'trimestral'){ if(activaTrim(e, m)) una(mesInicioTrim(m), 't_'+e.id); }
-    else if(anualSinFecha(e)){ una(mesAnualSF(m), 'y_'+e.id); }
-    else if(e.fecha && e.fecha.slice(0,7) === m && e.fecha <= hoyISO()) una(m, 'e_'+e.id);
-  });
-  return {si, tot};
-}function tasa(v, chicos, meses){ let si = 0, tot = 0; v.evs.forEach(e => { const r = tasaEv(e, chicos, meses); si += r.si; tot += r.tot; }); return {si, tot, p:pct(si, tot)}; }
-function estado(p, obj){ if(p === null || obj === null || obj === undefined || obj === '') return 'neutro'; if(p >= obj) return 'ok'; if(p >= obj * .8) return 'medio'; return 'bajo'; }
-const ESTADO_TXT = {ok:'Cumple el objetivo', medio:'Cerca del objetivo', bajo:'Por debajo del objetivo', neutro:'Sin objetivo definido'};
-function widgetsActuales(){
-  const c = cfgDash(); if(Array.isArray(c.widgets)) return c.widgets;
-  const vs = variables(); const w = vs.map(v => ({id:'k_'+v.id, tipo:'kpi', variable:v.id}));
-  if(vs[0]){ w.push({id:'e_'+vs[0].id, tipo:'evolucion', variable:vs[0].id}); w.push({id:'c_'+vs[0].id, tipo:'chicos', variable:vs[0].id}); }
-  if(S.eventos.some(esAnual)) w.push({id:'anu', tipo:'anuales'});
-  return w;
-}
-function aniosDisponibles(){ const s = new Set([cursoEscolarActual()]); S.registros.forEach(r => r.mes && s.add(cursoEscolarDe(r.mes))); S.eventos.forEach(e => e.fecha && s.add(cursoEscolarDe(e.fecha.slice(0,7)))); return [...s].sort((a,b) => b-a); }
-function eventosAnio(cursos, y){ const ms = new Set(mesesCurso(y)); return S.eventos.filter(e => conFecha(e) && ms.has(e.fecha.slice(0,7)) && cursos.some(c => aplica(e,c))).sort((a,b) => a.fecha.localeCompare(b.fecha)); }
-const colorEstado = (v, est, base) => ({ok:v('--ok'), medio:v('--star'), bajo:v('--no')})[est] || base;
-function lineaObjetivo(obj, n, v){ return obj === null || obj === undefined ? [] : [{type:'line', label:'Objetivo', data:Array(n).fill(obj), borderColor:v('--muted'), borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false}]; }
-
 function vistaDashboard(){
-  const cursos = cursosSel(); const meses = mesesCurso(S.anio); const vs = variables();
-  const anios = aniosDisponibles();
-  const ctrl = `<label class="sel"><span class="vh">Curso escolar</span><select data-ch="anio">${anios.map(y => `<option value="${y}" ${y===S.anio?'selected':''}>Curso ${y}-${String(y+1).slice(2)}</option>`).join('')}</select></label>`;
-  S.graficos = [];
-  const ws = widgetsActuales();
-  const cuerpo = ws.length ? ws.map((w,i) => widget(w, i, ws.length, cursos, meses, vs)).join('') : vacio(esAdmin() ? 'El dashboard está vacío. Pulsa «Configurar dashboard» para añadir gráficos.' : 'El administrador todavía no ha configurado el dashboard.');
-  return `<div class="barra">${ctrl}${ctrlCurso()}<button class="btn sec no-print" data-a="excelDashboard">Descargar Excel</button><button class="btn sec no-print" data-a="imprimir">Imprimir o guardar PDF</button>${esAdmin() ? `<button class="btn ${S.dashEdit ? '' : 'sec'} no-print" data-a="dashEditar">${S.dashEdit ? 'Terminar configuración' : 'Configurar dashboard'}</button>` : ''}</div>
-    ${S.dashEdit && esAdmin() ? panelDash(vs) : ''}
-    <p class="ayuda">Datos acumulados del curso escolar hasta hoy. Verde: cumple el objetivo. Ámbar: a menos de un 20 % de él. Rojo: por debajo.</p>
-    <div class="dash">${cuerpo}</div>`;
+  const cursos = cursosSel(); const acts = actividades().filter(a => cursos.some(c => aplica(a, c))); const gs = gruposDash(); const todos = cursos.flatMap(chicosDe);
+  const por = `<div class="seg" role="group" aria-label="Agrupar"><button class="${S.dashPor!=='preceptor'?'on':''}" data-a="dashPor" data-v="curso" aria-pressed="${S.dashPor!=='preceptor'}">Por curso</button><button class="${S.dashPor==='preceptor'?'on':''}" data-a="dashPor" data-v="preceptor" aria-pressed="${S.dashPor==='preceptor'}">Por preceptor</button></div>`;
+  const barra = `<div class="barra no-print">${ctrlMes()}${ctrlCurso()}${por}<button class="btn sec" data-a="excelDashboard">Descargar Excel</button><button class="btn sec" data-a="imprimir">Imprimir o guardar PDF</button></div>`;
+  if(!acts.length) return barra + vacio(esAdmin() ? 'Crea las actividades en la pestaña Actividades.' : 'El administrador todavía no ha creado las actividades.');
+  const celda = (a, ch) => { const r = cumplen(a, ch, S.mes); if(r) return `<td class="sem ${colorP(r.p)}"><b>${r.k}/${r.n}</b><small>${r.p} %</small></td>`; return `<td class="sem neutro"><b>${fmt(totalAct(a, ch, [S.mes]))}</b><small>${TOT_CORTO[a.total || 'suma']}</small></td>`; };
+  const filasGs = (gs.length > 1 ? [...gs, {nombre:'Total', corto:'Total', chicos:todos, total:true}] : gs);
+  const semaforo = `<section class="bloque"><div class="bloque-cab"><h2>Semáforo de ${mesLargo(S.mes)}</h2></div>
+    <div class="tabla-wrap" data-scroll="sem"><table class="tabla semaforo"><thead><tr><th class="nom">${S.dashPor === 'preceptor' ? 'Preceptor' : 'Curso'}</th>${acts.map(a => `<th class="col"><span class="col-nom">${esc(etiq(a))}</span>${a.esperado ? `<span class="col-fecha">${a.esperado} al ${a.periodo === 'trimestre' ? 'trim.' : 'mes'}</span>` : ''}</th>`).join('')}</tr></thead>
+    <tbody>${filasGs.map(g => `<tr class="${g.total ? 'fila-total' : ''}"><th class="nom" scope="row"><span>${esc(g.nombre)}</span><small>${g.chicos.length} chicos</small></th>${acts.map(a => celda(a, g.chicos)).join('')}</tr>`).join('')}</tbody></table></div>
+    <p class="nota">En cada casilla, cuántos chicos cumplen lo esperado. Verde: el 80 % o más; ámbar: entre el 50 y el 80 %; rojo: menos del 50 %. Las trimestrales cuentan lo que va de trimestre. En gris, actividades sin esperado: se muestra su total.</p></section>`;
+  if(!S.dashAct || !acts.some(a => a.id === S.dashAct)) S.dashAct = acts[0].id;
+  const a = acts.find(x => x.id === S.dashAct);
+  S.graficos = [{id:'g-evo', build:vv => { const meses = mesesCurso(cursoEscolarDe(S.mes)); const labels = meses.map(m => cap(MESES[+m.slice(5)-1].slice(0,3)));
+    const ds = gs.map((g, i) => ({label:g.corto, data:meses.map(m => m > hoyMes() ? null : totalAct(a, g.chicos, [m])), borderColor:g.c ? vv(varCurso(g.c)) : PALETA[i % PALETA.length], backgroundColor:g.c ? vv(varCurso(g.c)) : PALETA[i % PALETA.length], tension:.3, pointRadius:3, borderWidth:2.5}));
+    if(gs.length > 1) ds.push({label:'Total', data:meses.map(m => m > hoyMes() ? null : totalAct(a, todos, [m])), borderColor:vv('--ink'), backgroundColor:vv('--ink'), tension:.3, pointRadius:3, borderWidth:3.5});
+    return {type:'line', data:{labels, datasets:ds}, options:{responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true}}, plugins:{legend:{position:'bottom'}}}}; }}];
+  const evo = `<section class="bloque"><div class="bloque-cab"><h2>Evolución del curso escolar</h2><label class="sel"><span class="vh">Actividad</span><select data-ch="dashAct">${acts.map(x => `<option value="${x.id}" ${x.id === S.dashAct ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('')}</select></label></div>
+    <p class="nota" style="margin:-.4rem 0 .6rem">Total de cada mes (${TOT_CORTO[a.total || 'suma']}).</p><div class="grafico"><canvas id="g-evo" aria-label="Evolución de ${esc(a.nombre)}"></canvas></div></section>`;
+  return barra + semaforo + panelAlertas(alertas(todos, S.mes), S.mes, true) + evo;
 }
-function panelDash(vs){
-  const opsVar = vs.map(v => `<option value="${v.id}">${esc(v.nombre)} (${v.tipo})</option>`).join('');
-  return `<form class="panel" data-f="nuevoWidget"><h3>Añadir un gráfico</h3><div class="campos">
-      <label>Tipo<select name="tipo" id="nw-tipo">${Object.entries(WTIPOS).map(([k,t]) => `<option value="${k}">${t}</option>`).join('')}</select></label>
-      <label id="nw-var">Actividad<select name="variable">${opsVar}</select></label>
-      <label>Título (opcional)<input name="titulo" maxlength="60" autocomplete="off"></label>
-      <button class="btn" type="submit">Añadir gráfico</button></div></form>
-    <form class="panel" data-f="objetivos"><h3>Cómputo y asistencia óptima de cada actividad</h3>
-      <p class="nota" style="margin:0 0 .6rem">Indica el porcentaje que consideras óptimo. Semanal: 100 % es todas las semanas y 75 % es 3 de cada 4; con «Frecuencia de cada chico», 100 % es que cada uno cumple la suya (se indica en Chicos, «Editar»). Mensual: 100 % es todos los meses. Anual: porcentaje de chicos que deberían asistir. Déjalo vacío si no quieres objetivo.</p>
-      ${vs.length ? `<div class="envoltura"><table class="datos"><thead><tr><th>Actividad</th><th>Tipología</th><th>Cómputo mensual</th><th>Medir por</th><th>Óptimo (%)</th></tr></thead><tbody>${vs.map(v => `<tr><td>${esc(v.nombre)}</td><td>${cap(v.tipo)}</td><td>${v.tipo === 'semanal' ? `<select name="agr_${v.id}" aria-label="Cómputo de ${esc(v.nombre)}">${Object.entries(AGREG).map(([k,t]) => `<option value="${k}" ${(v.evs[0].agregacion || 'suma') === k ? 'selected' : ''}>${t}</option>`).join('')}</select>` : '—'}</td><td>${v.tipo === 'semanal' ? `<select name="frq_${v.id}" aria-label="Cómo medir ${esc(v.nombre)}"><option value="0">% de semanas</option><option value="1" ${v.evs[0].porFrecuencia ? 'selected' : ''}>Frecuencia de cada chico</option></select>` : '—'}</td><td><input type="number" name="obj_${v.id}" min="0" max="100" step="1" value="${v.objetivo ?? ''}" style="width:6rem" aria-label="Óptimo de ${esc(v.nombre)}"></td></tr>`).join('')}</tbody></table></div>
-      <button class="btn" type="submit" style="margin-top:.7rem">Guardar objetivos</button>` : vacio('Crea primero actividades en la pestaña Actividades.')}</form>`;
-}
-function widget(w, i, n, cursos, meses, vs){
-  const v = vs.find(x => x.id === w.variable);
-  const titulo = esc(w.titulo || (w.tipo === 'anuales' ? 'Actividades anuales' : (v ? v.nombre : 'Actividad eliminada')) + (w.titulo || w.tipo === 'anuales' || w.tipo === 'kpi' ? '' : ': ' + WTIPOS[w.tipo].split(' (')[0].toLowerCase()));
-  const ctrls = S.dashEdit && esAdmin() ? `<span class="w-ctrl"><button class="icono" data-a="wMover" data-i="${i}" data-d="-1" ${i===0?'disabled':''} aria-label="Subir">↑</button><button class="icono" data-a="wMover" data-i="${i}" data-d="1" ${i===n-1?'disabled':''} aria-label="Bajar">↓</button><button class="btn sec peq" data-a="wQuitar" data-i="${i}">Quitar</button></span>` : '';
-  const cab = `<div class="bloque-cab"><h2>${titulo}</h2>${ctrls}</div>`;
-  if(w.tipo !== 'anuales' && !v) return `<section class="bloque w">${cab}${vacio('La actividad de este gráfico ya no existe.')}</section>`;
-  const ch = cursos.flatMap(chicosDe); const id = 'g' + i;
-  if(w.tipo === 'kpi'){
-    const r = tasa(v, ch, meses); const est = estado(r.p, v.objetivo);
-    return `<section class="bloque w w-kpi est-${est}">${cab}<b class="kpi-n">${pctTxt(r.p)}</b>
-      <div class="obj"><span style="width:${r.p || 0}%"></span>${v.objetivo !== null ? `<i style="left:${v.objetivo}%"></i>` : ''}</div>
-      <p class="nota">${v.objetivo !== null ? `Óptimo ${v.objetivo} %. ` : ''}${ESTADO_TXT[est]}. ${r.si} de ${r.tot} ${UNIDAD[v.tipo]}, sumando todos los chicos.</p></section>`;
-  }
-  if(w.tipo === 'chicos'){
-    const filas = ch.map(x => { const r = tasa(v, [x], meses); return {x, r, est:estado(r.p, v.objetivo)}; }).filter(f => f.r.tot).sort((a,b) => porNombre(a.x, b.x));
-    return `<section class="bloque w w-ancho w-chicos">${cab}${filas.length ? `<div class="envoltura"><table class="datos"><thead><tr><th>Chico</th>${cursos.length > 1 ? '<th>Curso</th>' : ''}<th>Preceptor</th><th>Real</th></tr></thead><tbody>${
-      filas.map(f => `<tr class="fila-${f.est}"><td>${esc(f.x.nombre)}</td>${cursos.length > 1 ? `<td>${cortoCurso(f.x.curso)}</td>` : ''}<td>${esc(nombreResp(f.x))}</td><td class="n">${f.r.si}/${f.r.tot} ${pctTxt(f.r.p)}${barraMini(f.r.p)}</td></tr>`).join('')}</tbody></table></div>` : vacio('Todavía no hay datos.')}
-      <p class="nota">${v.objetivo !== null ? `Óptimo ${v.objetivo} %. ` : ''}En rojo, por debajo del óptimo.</p></section>`;
-  }
-  if(w.tipo === 'evolucion'){
-    const labels = meses.map(m => cap(MESES[+m.slice(5)-1].slice(0,3)));
-    S.graficos.push({id, build:vv => ({type:'line', data:{labels, datasets:[
-      ...cursos.filter(c => v.evs.some(e => aplica(e,c))).map(c => ({label:cortoCurso(c), data:meses.map(m => m > hoyMes() ? null : tasa(v, chicosDe(c), [m]).p), borderColor:vv(varCurso(c)), backgroundColor:vv(varCurso(c)), tension:.3, pointRadius:3, borderWidth:2.5})),
-      ...(cursos.length > 1 ? [{label:'Total', data:meses.map(m => m > hoyMes() ? null : tasa(v, ch, [m]).p), borderColor:vv('--ink'), backgroundColor:vv('--ink'), tension:.3, pointRadius:3, borderWidth:3.5}] : []),
-      ...lineaObjetivo(v.objetivo, meses.length, vv)]}, options:{responsive:true, maintainAspectRatio:false, scales:{y:{min:0, max:100, ticks:{callback:x => x + '%'}}}, plugins:{legend:{position:'bottom'}}}})});
-    return `<section class="bloque w">${cab}<div class="grafico"><canvas id="${id}"></canvas></div></section>`;
-  }
-  if(w.tipo === 'cursos' || w.tipo === 'responsables'){
-    let etiquetas, datos;
-    if(w.tipo === 'cursos'){ const cs = cursos.filter(c => v.evs.some(e => aplica(e,c))); etiquetas = cs.map(cortoCurso); datos = cs.map(c => tasa(v, chicosDe(c), meses).p); if(cs.length > 1){ etiquetas.push('Total'); datos.push(tasa(v, ch, meses).p); } }
-    else { const gs = cursos.flatMap(c => grupos(c).map(g => ({...g, c}))); etiquetas = gs.map(g => g.nombre + (cursos.length > 1 ? ` (${cortoCurso(g.c)})` : '')); datos = gs.map(g => tasa(v, g.chicos, meses).p); }
-    S.graficos.push({id, build:vv => ({type:'bar', data:{labels:etiquetas, datasets:[{label:'Real', data:datos, backgroundColor:datos.map(p => colorEstado(vv, estado(p, v.objetivo), vv('--night-2'))), borderRadius:5, maxBarThickness:46}, ...lineaObjetivo(v.objetivo, etiquetas.length, vv)]},
-      options:{responsive:true, maintainAspectRatio:false, scales:{y:{min:0, max:100, ticks:{callback:x => x + '%'}}}, plugins:{legend:{display:false}}}})});
-    return `<section class="bloque w">${cab}<div class="grafico"><canvas id="${id}"></canvas></div>${v.objetivo !== null ? `<p class="nota">Línea discontinua: óptimo del ${v.objetivo} %.</p>` : ''}</section>`;
-  }
-  if(w.tipo === 'anuales'){
-    const evs = eventosAnio(cursos, S.anio).filter(e => e.fecha <= hoyISO()); const obj = cfgDash().objAnuales ?? null;
-    if(!evs.length) return `<section class="bloque w">${cab}${vacio('Aún no se ha celebrado ninguna actividad anual en este curso escolar.')}</section>`;
-    const datos = evs.map(e => { const r = tasaEv(e, ch, [e.fecha.slice(0,7)]); return pct(r.si, r.tot); });
-    S.graficos.push({id, build:vv => ({type:'bar', data:{labels:evs.map(e => `${e.nombre.length > 24 ? e.nombre.slice(0,23) + '…' : e.nombre} (${fechaCorta(e.fecha)})`), datasets:[{label:'Asistencia', data:datos, backgroundColor:datos.map(p => colorEstado(vv, estado(p, obj), vv('--star'))), borderRadius:5, maxBarThickness:22}]},
-      options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{x:{min:0, max:100, ticks:{callback:x => x + '%'}}}, plugins:{legend:{display:false}}}})});
-    return `<section class="bloque w">${cab}<div class="grafico" style="height:${Math.max(220, evs.length * 30 + 60)}px"><canvas id="${id}"></canvas></div></section>`;
-  }
-  return '';
-}
-function excelDashboard(){
-  if(typeof XLSX === 'undefined'){ toast('No se pudo cargar el generador de Excel. Revisa la conexión.'); return; }
-  const cursos = cursosSel(); const meses = mesesCurso(S.anio); const vs = variables(); const ch = cursos.flatMap(chicosDe); const wb = XLSX.utils.book_new();
-  const a1 = [['Actividad','Tipología','Óptimo (%)','Real (%)','Hechas','Posibles', ...cursos.map(c => cortoCurso(c) + ' (%)')]];
-  vs.forEach(v => { const r = tasa(v, ch, meses); a1.push([v.nombre, v.tipo, v.objetivo ?? '', r.p ?? '', r.si, r.tot, ...cursos.map(c => tasa(v, chicosDe(c), meses).p ?? '')]); });
-  const h1 = XLSX.utils.aoa_to_sheet(a1); h1['!cols'] = [{wch:30},{wch:12},{wch:11},{wch:10},{wch:9},{wch:9}]; XLSX.utils.book_append_sheet(wb, h1, 'Resumen');
-  const a2 = [['Actividad (%)', ...meses.map(m => cap(MESES[+m.slice(5)-1]))]]; vs.forEach(v => a2.push([v.nombre, ...meses.map(m => m > hoyMes() ? '' : (tasa(v, ch, [m]).p ?? ''))]));
-  const h2 = XLSX.utils.aoa_to_sheet(a2); h2['!cols'] = [{wch:30}]; XLSX.utils.book_append_sheet(wb, h2, 'Evolución mensual');
-  XLSX.writeFile(wb, `E6-Mizar-dashboard-${S.anio}-${S.anio+1}.xlsx`); toast('Excel descargado');
-}
+const PALETA = ['#3A62C2','#23867B','#7853A6','#B53D57','#C98A10','#2F7FA8','#6B8E23','#A0522D'];
 function dibujarGraficos(){
   if(typeof Chart === 'undefined'){ document.querySelectorAll('.grafico').forEach(g => g.innerHTML = '<p class="nota">No se pudo cargar la librería de gráficos.</p>'); return; }
   const css = getComputedStyle(document.documentElement); const v = n => css.getPropertyValue(n).trim();
   Chart.defaults.color = v('--muted'); Chart.defaults.borderColor = v('--line'); Chart.defaults.font.family = 'Figtree, system-ui, sans-serif';
   (S.graficos || []).forEach(g => { const el = document.getElementById(g.id); if(el) S.charts.push(new Chart(el, g.build(v))); });
 }
-async function guardarWidgets(ws){ return guardar(() => DB.set('config', 'dashboard', {widgets:ws}, true)); }
+function excelDashboard(){
+  if(typeof XLSX === 'undefined'){ toast('No se pudo cargar el generador de Excel. Revisa la conexión.'); return; }
+  const cursos = cursosSel(); const acts = actividades().filter(a => cursos.some(c => aplica(a, c))); const gs = gruposDash(); const todos = cursos.flatMap(chicosDe); const wb = XLSX.utils.book_new();
+  const a1 = [[`Semáforo de ${mesLargo(S.mes)}`], [S.dashPor === 'preceptor' ? 'Preceptor' : 'Curso', 'Chicos', ...acts.map(a => etiq(a) + (a.esperado ? ` (cumplen ${a.esperado}/${a.periodo === 'trimestre' ? 'trim.' : 'mes'})` : ` (${TOT_CORTO[a.total || 'suma']})`))]];
+  [...gs, ...(gs.length > 1 ? [{nombre:'Total', chicos:todos}] : [])].forEach(g => a1.push([g.nombre, g.chicos.length, ...acts.map(a => { const r = cumplen(a, g.chicos, S.mes); return r ? `${r.k}/${r.n} (${r.p} %)` : (totalAct(a, g.chicos, [S.mes]) ?? ''); })]));
+  const h1 = XLSX.utils.aoa_to_sheet(a1); h1['!cols'] = [{wch:22},{wch:8}, ...acts.map(() => ({wch:20}))]; XLSX.utils.book_append_sheet(wb, h1, 'Semáforo');
+  const meses = mesesCurso(cursoEscolarDe(S.mes));
+  const a2 = [['Actividad (total del mes)', ...meses.map(m => cap(MESES[+m.slice(5)-1]))]]; acts.forEach(a => a2.push([`${a.nombre} (${TOT_CORTO[a.total || 'suma']})`, ...meses.map(m => m > hoyMes() ? '' : (totalAct(a, todos, [m]) ?? ''))]));
+  const h2 = XLSX.utils.aoa_to_sheet(a2); h2['!cols'] = [{wch:36}]; XLSX.utils.book_append_sheet(wb, h2, 'Evolución');
+  XLSX.writeFile(wb, `E6-Mizar-dashboard-${S.mes}.xlsx`); toast('Excel descargado');
+}
 
 /* ============================ Mejoras (administrador principal) ============================ */
 function abrirSugerencia(){
@@ -1100,14 +936,13 @@ function abrirSugerencia(){
       guardar(() => DB.add('sugerencias', {texto, autor:S.profile.id, nombre:S.profile.nombre, rol:S.profile.rol, curso:S.profile.curso || '', pestana:S.view, fecha:new Date().toISOString(), estado:'nueva'}), 'Sugerencia enviada. Gracias.'); });
 }
 function informe(conNombres){
-  const vs = variables(); const nom = (v,i) => conNombres ? v.nombre : `Actividad ${i+1}`;
-  const meses = mesesCurso(cursoEscolarActual()); const sg = [...S.sugerencias].sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+  const acts = actividades(); const nom = (a,i) => conNombres ? a.nombre : `Actividad ${i+1}`; const meses = mesesCurso(cursoEscolarActual()); const todos = CURSOS.flatMap(c => chicosDe(c.id));
+  const sg = [...S.sugerencias].sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
   const L = [`Informe de uso de la app E6 Mizar (${fechaLarga(hoyISO())}). Propón mejoras a partir de esto y prepárame el index.html actualizado, manteniendo todo lo anterior.`, '',
     `Usuarios activos: ${S.usuarios.filter(u => u.activo !== false && u.rol === 'responsable').length} preceptores y ${S.usuarios.filter(u => u.activo !== false && u.rol !== 'responsable').length} administradores.`,
-    `Chicos por curso: ${CURSOS.map(c => `${c.nombre} ${chicosDe(c.id).length}`).join(', ')}.`, '', 'Actividades (tipología, cómputo, óptimo y asistencia real del curso escolar hasta hoy):'];
-  vs.forEach((v,i) => { const r = tasa(v, CURSOS.flatMap(c => chicosDe(c.id)), meses); const e = v.evs[0];
-    L.push(`- ${nom(v,i)}: ${v.tipo}${v.tipo === 'semanal' ? ', cómputo ' + AGREG_CORTO[e.agregacion || 'suma'].toLowerCase() : ''}, óptimo ${v.objetivo ?? 'sin definir'}${v.objetivo !== null ? ' %' : ''}, real ${pctTxt(r.p)}; por curso: ${CURSOS.filter(c => v.evs.some(x => aplica(x,c.id))).map(c => `${c.corto} ${pctTxt(tasa(v, chicosDe(c.id), meses).p)}`).join(', ')}.`); });
-  L.push('', `Gráficos del dashboard: ${widgetsActuales().map(w => WTIPOS[w.tipo].split(' (')[0]).join('; ') || 'ninguno'}.`, '', `Sugerencias de los usuarios (${sg.length}):`);
+    `Chicos por curso: ${CURSOS.map(c => `${c.nombre} ${chicosDe(c.id).length}`).join(', ')}.`, '', 'Actividades (cómo se apunta, total, esperado, total del curso escolar y cuántos cumplen este mes):'];
+  acts.forEach((a,i) => { const r = cumplen(a, todos, hoyMes()); L.push(`- ${nom(a,i)}: ${DATOS[a.dato] || ''}, total ${TOT_CORTO[a.total || 'suma']}, esperado ${a.esperado ? a.esperado + ' al ' + a.periodo : 'sin definir'}, total del curso ${fmt(totalAct(a, todos, meses))}, cumplen ${r ? r.k + '/' + r.n : '—'}.`); });
+  L.push('', `Sugerencias de los usuarios (${sg.length}):`);
   sg.forEach(x => L.push(`- [${(x.fecha||'').slice(0,10)}, ${x.rol === 'responsable' ? 'preceptor de ' + cortoCurso(x.curso) : rolTxt(x).toLowerCase()}, en la pestaña ${x.pestana}] ${x.texto}`));
   if(!sg.length) L.push('- Ninguna todavía.');
   return L.join('\n');
@@ -1119,64 +954,82 @@ function vistaMejoras(){
     <label class="check" style="margin-bottom:.6rem"><input type="checkbox" data-ch="infNombres" ${S.infNombres ? 'checked' : ''}> Incluir los nombres de las actividades</label>
     <textarea id="informe" rows="12" style="width:100%;font:inherit;font-size:.9rem;border:1px solid var(--line);border-radius:9px;padding:.6rem;background:var(--surface-2);color:var(--ink)">${esc(informe(S.infNombres))}</textarea>
     <button class="btn" data-a="copiarInforme" style="margin-top:.6rem">Copiar informe</button></section>
-    <h2 class="seccion">Sugerencias recibidas</h2>
+    <h2 class="seccion">Sugerencias recibidas</h2>${sg.length ? `<p><button class="btn sec" data-a="sgBorrarTodas">Borrar todas las sugerencias</button></p>` : ''}
     ${sg.length ? `<section class="bloque"><ul class="lista">${sg.map(x => `<li><span class="li-nom" style="font-weight:${x.estado === 'vista' ? 400 : 600}">${esc(x.texto)}<small>${esc(x.nombre || '')}, ${x.rol === 'responsable' ? 'preceptor de ' + cortoCurso(x.curso) : rolTxt(x).toLowerCase()}. ${x.fecha ? fechaLarga(x.fecha.slice(0,10)) : ''}. Pestaña ${esc(x.pestana || '')}</small></span>${x.estado !== 'vista' ? `<button class="btn sec peq" data-a="sgVista" data-id="${x.id}">Marcar como resuelta</button>` : ''}<button class="btn sec peq" data-a="sgBorrar" data-id="${x.id}">Eliminar</button></li>`).join('')}</ul></section>` : vacio('Todavía no hay sugerencias. Cualquier usuario puede enviarlas con el botón «Sugerir mejora».')}`;
 }
 
-/* ============================ Eventos (admin) ============================ */
+/* ============================ Actividades (admin) ============================ */
 function textoCursos(e){ return (!e.cursos || !e.cursos.length || e.cursos.length === CURSOS.length) ? 'Todos los cursos' : e.cursos.map(cortoCurso).join(', '); }
 function checksCursos(sel){ return CURSOS.map(c => `<label class="check"><input type="checkbox" name="cursos" value="${c.id}" ${!sel || !sel.length || sel.includes(c.id) ? 'checked' : ''}> ${c.nombre}</label>`).join(''); }
-function textoRango(e){ return (e.desde ? 'Desde el ' + fechaLarga(e.desde) : 'Desde el inicio') + (e.hasta ? ' hasta el ' + fechaLarga(e.hasta) : ''); }
-function ajustarCampos(f){
-  const tipo = (f.querySelector('[name=tipo]') || {}).value; const modo = (f.querySelector('[name=modoFecha]') || {}).value || 'dia';
-  f.querySelectorAll('[data-tipos]').forEach(el => { const ok = el.dataset.tipos.split(' ').includes(tipo) && (!el.dataset.modos || tipo !== 'anual' || el.dataset.modos.split(' ').includes(modo)); el.style.display = ok ? '' : 'none'; });
-}
-function camposEvento(e){
-  const tipo = e ? tipoDe(e) : 'semanal';
-  const modo = e && tipo === 'anual' ? (!e.fecha ? 'no' : e.fecha.length === 7 ? 'mes' : 'dia') : 'dia';
-  const ver = (tipos, modos) => (tipos.split(' ').includes(tipo) && (!modos || tipo !== 'anual' || modos.split(' ').includes(modo))) ? '' : 'style="display:none"';
-  const nombresOc = [...new Set(S.eventos.filter(esOcasional).map(x => x.nombre))];
-  return `${e ? `<input type="hidden" name="tipo" value="${tipo}">` : `<label>Tipología<select name="tipo">${Object.entries(TIPOS).map(([k,t]) => `<option value="${k}">${t}</option>`).join('')}</select></label>`}
+const opts = (obj, v) => Object.entries(obj).map(([k,t]) => `<option value="${k}" ${v === k ? 'selected' : ''}>${t}</option>`).join('');
+function camposAct(a){
+  a = a || {dato:'numero', total:'suma', periodo:'mes'};
+  return `<div class="campos">
+      <label>Nombre<input name="nombre" required maxlength="50" autocomplete="off" value="${esc(a.nombre || '')}" placeholder="Por ejemplo, Círculo"></label>
+      <label>Abreviatura (opcional)<input name="abrev" maxlength="8" autocomplete="off" value="${esc(a.abrev || '')}" placeholder="csr"></label>
+      <label>Se apunta como<select name="dato">${opts(DATOS, a.dato)}</select></label>
+      <label>Total del mes<select name="total">${opts(TOTALES, a.total || 'suma')}</select></label></div>
     <div class="campos">
-      <label>Nombre<input name="nombre" required maxlength="60" autocomplete="off" list="dl-ocasionales" value="${esc(e ? e.nombre : '')}" placeholder="Por ejemplo, Tutoría o Convivencia"></label>
-      <datalist id="dl-ocasionales">${nombresOc.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
-      <label data-tipos="anual" ${ver('anual')}>Fecha<select name="modoFecha"><option value="dia" ${modo==='dia'?'selected':''}>Un día concreto</option><option value="mes" ${modo==='mes'?'selected':''}>Solo el mes</option><option value="no" ${modo==='no'?'selected':''}>Sin fecha (una vez cada curso)</option></select></label>
-      <label data-tipos="anual ocasional" data-modos="dia" ${ver('anual ocasional','dia')}>Día<input type="date" name="fecha" value="${esc(e && e.fecha && e.fecha.length === 10 ? e.fecha : hoyISO())}"></label>
-      <label data-tipos="anual" data-modos="mes" ${ver('anual','mes')}>Mes<input type="month" name="mesF" value="${esc(e && e.fecha ? e.fecha.slice(0,7) : hoyMes())}"></label>
-    </div>
-    <div class="campos" data-tipos="semanal mensual trimestral" ${ver('semanal mensual trimestral')}>
-      <label>Desde (opcional)<input type="date" name="desde" value="${esc(e && e.desde ? e.desde : '')}"></label>
-      <label>Hasta (opcional)<input type="date" name="hasta" value="${esc(e && e.hasta ? e.hasta : '')}"></label>
-    </div>
-    <p class="nota" data-tipos="semanal" ${ver('semanal')}>Se marca cada semana en la vista Semana. Su cómputo mensual (suma, media…) se elige en Dashboard, «Configurar dashboard».</p>
-    <p class="nota" data-tipos="mensual" ${ver('mensual')}>Se marca una vez al mes en la vista Mes.</p>
-    <p class="nota" data-tipos="trimestral" ${ver('trimestral')}>Se marca una vez por trimestre en la vista Mes: enero-marzo, abril-junio, julio-septiembre y octubre-diciembre.</p>
-    <p class="nota" data-tipos="ocasional" ${ver('ocasional')}>Crea una por cada fecha con el mismo nombre (por ejemplo, «Convivencia»). En el dashboard se suman todas las del mismo nombre.</p>
-    <p class="nota" data-tipos="anual" ${ver('anual')}>Con fecha, se marca en su semana o su mes. Sin fecha, aparece todo el curso en la vista Mes y se marca una vez (por ejemplo, el curso de retiro).</p>
-    <fieldset><legend>Para qué cursos</legend><div class="cursos-check">${checksCursos(e ? e.cursos : null)}</div></fieldset>`;
+      <label>Lo esperado por chico (opcional)<input type="number" name="esperado" min="0" max="99" step="1" value="${a.esperado ?? ''}" placeholder="Por ejemplo, 4"></label>
+      <label>Cada<select name="periodo">${opts({mes:'mes', trimestre:'trimestre'}, a.periodo || 'mes')}</select></label>
+      <label>Grupo de chicos (opcional)<select name="grupo"><option value="">Ninguno</option>${opts(GRUPOS_CH, a.grupo || '')}</select></label></div>
+    <p class="nota">«Lo esperado» es cuántas veces debería hacerla cada chico (en sí o no, pon 1). Con él se colorea el semáforo y se avisa a los preceptores. Si eliges un grupo, lo esperado solo se pide a los chicos de ese grupo y el informe dirá cuántos de ellos han ido al menos una vez.</p>
+    <fieldset><legend>Para qué cursos</legend><div class="cursos-check">${checksCursos(a.cursos || null)}</div></fieldset>`;
 }
-function datosEvento(fd, tipo){
+function datosAct(fd){
   const cursos = fd.getAll('cursos'); if(!cursos.length) return 'Elige al menos un curso.';
-  const base = {nombre:String(fd.get('nombre')).trim(), cursos:cursos.length === CURSOS.length ? [] : cursos, tipo};
-  if(!base.nombre) return 'Escribe el nombre.';
-  if(tipo === 'ocasional'){ if(!fd.get('fecha')) return 'Elige el día.'; return {...base, fecha:fd.get('fecha')}; }
-  if(tipo === 'anual'){ const modo = fd.get('modoFecha'); const fecha = modo === 'dia' ? fd.get('fecha') : modo === 'mes' ? fd.get('mesF') : '';
-    if(modo !== 'no' && !fecha) return 'Elige la fecha o marca «Sin fecha».'; return {...base, fecha:fecha || ''}; }
-  const desde = fd.get('desde') || '', hasta = fd.get('hasta') || '';
-  if(hasta && desde && hasta < desde) return 'La fecha «Hasta» no puede ser anterior a «Desde».';
-  return {...base, desde, hasta};
-}function itemEvento(e, detalle){ return `<li><span class="li-nom">${esc(e.nombre)}<small>${detalle.replace(/\.\./g, '.')}</small></span><button class="btn sec peq" data-a="editarEvento" data-id="${e.id}">Editar</button><button class="btn sec peq" data-a="borrarEvento" data-id="${e.id}">Eliminar</button></li>`; }
-function vistaEventos(){
-  const form = `<form class="panel" data-f="nuevoEvento"><h3>Nueva actividad</h3>${camposEvento(null)}<button class="btn" type="submit">Crear actividad</button></form>`;
-  const sec = (tit, arr, det, vac) => `<h2 class="seccion">${tit}</h2>${arr.length ? `<section class="bloque"><ul class="lista">${arr.map(e => itemEvento(e, det(e))).join('')}</ul></section>` : vacio(vac)}`;
-  const desc = (a,b) => (b.fecha||'').localeCompare(a.fecha||'');
-  return `${form}
-    ${sec('Mensuales', S.eventos.filter(esMensual).sort(porOrden), e => `${textoCursos(e)}. ${textoRango(e)}`, 'No hay actividades mensuales.')}
-    ${sec('Trimestrales', S.eventos.filter(esTrimestral).sort(porNombre), e => `${textoCursos(e)}. ${textoRango(e)}`, 'No hay actividades trimestrales.')}
-    ${sec('Semanales', S.eventos.filter(esSemanal).sort(porNombre), e => `Cómputo: ${AGREG_CORTO[e.agregacion || 'suma'].toLowerCase()}. ${textoCursos(e)}. ${textoRango(e)}`, 'No hay actividades semanales.')}
-    ${sec('Ocasionales', S.eventos.filter(esOcasional).sort((a,b) => porNombre(a,b) || desc(a,b)), e => `${fechaLarga(e.fecha)}. ${textoCursos(e)}`, 'No hay actividades ocasionales.')}
-    ${sec('Anuales', S.eventos.filter(e => tipoDe(e) === 'anual').sort(desc), e => `${e.fecha ? fechaLarga(e.fecha) : 'Sin fecha: una vez cada curso'}. ${textoCursos(e)}`, 'No hay actividades anuales.')}`;
+  const nombre = String(fd.get('nombre')).trim(); if(!nombre) return 'Escribe el nombre.';
+  const e = String(fd.get('esperado') || '').trim(); const esperado = e === '' ? null : Math.max(0, Math.min(99, Math.round(+e) || 0)) || null;
+  return {v:2, nombre, abrev:String(fd.get('abrev') || '').trim(), dato:fd.get('dato'), total:fd.get('total'), esperado, periodo:fd.get('periodo'), grupo:fd.get('grupo') || '', cursos:cursos.length === CURSOS.length ? [] : cursos};
 }
+function vistaEventos(){
+  const acts = actividades();
+  const desc = a => `${DATOS[a.dato] || ''}. Total: ${TOT_CORTO[a.total || 'suma']}.${a.esperado ? ` Esperado: ${a.esperado} al ${a.periodo === 'trimestre' ? 'trimestre' : 'mes'}.` : ''}${a.grupo ? ` Grupo: ${GRUPOS_CH[a.grupo].toLowerCase()}.` : ''} ${textoCursos(a)}`;
+  return `<form class="panel" data-f="nuevaAct"><h3>Nueva actividad</h3>${camposAct(null)}<button class="btn" type="submit">Crear actividad</button></form>
+    <h2 class="seccion">Actividades</h2>${acts.length ? `<section class="bloque"><ul class="lista">${acts.map((a,i) => `<li><span class="li-nom">${esc(a.nombre)}${a.abrev ? ` <span class="meta">(${esc(a.abrev)})</span>` : ''}<small>${esc(desc(a))}</small></span>
+      <span class="w-ctrl"><button class="icono" data-a="moverAct" data-id="${a.id}" data-d="-1" ${i ? '' : 'disabled'} aria-label="Subir">↑</button><button class="icono" data-a="moverAct" data-id="${a.id}" data-d="1" ${i < acts.length - 1 ? '' : 'disabled'} aria-label="Bajar">↓</button>
+      <button class="btn sec peq" data-a="editarAct" data-id="${a.id}">Editar</button><button class="btn sec peq" data-a="borrarAct" data-id="${a.id}">Eliminar</button></span></li>`).join('')}</ul></section>
+      <p class="nota">El orden de esta lista es el de las columnas en Acompañamiento y en el informe.</p>` : vacio('Todavía no hay actividades.')}
+    <h2 class="seccion">Borrar información</h2>
+    <form class="panel" data-f="borrarMes"><h3>Borrar lo apuntado en un mes</h3><div class="campos">
+      <label>Mes<input type="month" name="mes" required value="${S.mes}"></label>
+      <label>Curso<select name="curso"><option value="todos">Todos los cursos</option>${CURSOS.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('')}</select></label>
+      <button class="btn peligro" type="submit">Borrar ese mes</button></div>
+      <p class="nota">Borra los números apuntados de todos los chicos de ese mes y curso. No se puede deshacer. Para borrar un chico, ve a Chicos → Editar; para una actividad, usa «Eliminar» en la lista de arriba.</p></form>`;
+}
+
+async function migrarV2(){
+  if(!esPrincipal() || S.migrando || cfgDoc('migracion').v2) return;
+  const viejos = S.eventos.filter(e => !esAct(e));
+  if(!viejos.length){ await DB.set('config', 'migracion', {v2:true}, true).catch(() => {}); return; }
+  S.migrando = true;
+  try{
+    const grupos = {}; viejos.forEach(e => { const k = norm(e.nombre).replace(/s$/, ''); (grupos[k] = grupos[k] || []).push(e); });
+    const mapa = {}; let orden = 1;
+    for(const evs of Object.values(grupos)){
+      const e0 = evs[0]; const t = tipoDe(e0); const n = e0.nombre;
+      const dato = (t === 'mensual' && !/padre/i.test(n)) || t === 'trimestral' ? 'sino' : 'numero';
+      const total = /c[ií]rculo|meditaci/i.test(n) ? 'media_semana' : dato === 'sino' || t === 'ocasional' || t === 'anual' ? 'chicos' : 'suma';
+      const id = nuevoId();
+      await DB.set('eventos', id, {v:2, nombre:n, abrev:'', dato, total, esperado:null, periodo:'mes', grupo:/c[ií]rculo/i.test(n) ? 'circulo' : /charla/i.test(n) ? 'charla' : '', cursos:e0.cursos || [], orden:orden++}, false);
+      evs.forEach(e => mapa[e.id] = id);
+    }
+    for(const r of S.registros){
+      const nuevo = {};
+      Object.entries(r.marcas || {}).forEach(([k, v]) => { if(v !== 'si') return; const mm = k.match(/^s_(.+)_\d{4}-\d{2}-\d{2}$/) || k.match(/^[aety]_(.+)$/); const nid = mm && mapa[mm[1]]; if(nid) nuevo['n_' + nid] = (nuevo['n_' + nid] || 0) + 1; });
+      if(Object.keys(nuevo).length) await DB.set('registros', r.id, {marcas:nuevo}, true);
+    }
+    for(const e of viejos) await DB.del('eventos', e.id);
+    await DB.set('config', 'migracion', {v2:true}, true);
+    toast('Actividades convertidas al nuevo formato. Revisa en Actividades lo esperado de cada una.');
+  }catch(e){ console.error(e); toast('No se pudo convertir todo. Avísame si ves datos raros.'); }
+  S.migrando = false;
+}
+async function borrarChicoTodo(x){
+  for(const r of S.registros.filter(r => r.chicoId === x.id)) await DB.del('registros', r.id);
+  await DB.del('chicos', x.id);
+}
+
 /* ============================ Avisos, recursos y manual ============================ */
 const cfgDoc = id => S.config.find(d => d.id === id) || {};
 const leidos = () => { try{ return JSON.parse(localStorage.getItem('e6-leidos-' + S.user.uid) || '[]'); }catch(e){ return S._leidos || []; } };
@@ -1214,14 +1067,14 @@ function revisarAvisos(){
   if(partes.length){ marcarLeidos(sinLeer.map(a => a.id)); menuModal('Hola, ' + S.profile.nombre, partes.join('')); }
 }
 const MANUAL = [
-  ['Para qué sirve', 'E6 Mizar es la app del preceptor: cada preceptor anota lo que hace cada uno de sus chicos, y los administradores ven el conjunto en el Informe y el Dashboard.'],
-  ['Acompañamiento', 'Aquí se marca. En «Semana» se apuntan las actividades semanales y las que tienen fecha; en «Mes», las mensuales, las trimestrales y las del curso. Toca para poner o quitar el ✓. «Fichas» muestra una tarjeta por chico (cómoda en el móvil); «Tabla», todo en filas. «Mis chicos» o «Todo el curso» cambia a quién ves.'],
-  ['Chicos', 'Alta de chicos, su preceptor y si es de círculos o de charlas. Para pasar un chico a otro preceptor, cámbialo en su desplegable. En «Editar» se indica, si procede, cada cuánto le toca una actividad (por ejemplo, la tutoría cada semana o cada dos).'],
-  ['Informe', 'Los datos del mes o del trimestre y el histórico del curso, sin nombres. Se puede descargar en Excel o guardar en PDF desde «Imprimir».'],
-  ['Dashboard', 'Gráficos de cada actividad frente a su óptimo: verde cumple, ámbar está cerca, rojo por debajo. Los preceptores ven solo su curso.'],
-  ['Avisos y recursos', 'En «Avisos» están los mensajes de los administradores; en «Recursos», los documentos para preparar los círculos y charlas. Los días 25 y 30 aparece un recordatorio para poner los datos al día.'],
+  ['Para qué sirve', 'E6 Mizar es la app del preceptor: cada preceptor apunta cada mes lo que ha hecho cada uno de sus chicos, y los administradores ven el conjunto en el Informe y el Dashboard.'],
+  ['Acompañamiento', 'Elige el mes y apunta cuántas veces ha hecho cada chico cada actividad: con + y − en «Fichas» (cómodo en el móvil) o con el desplegable en «Tabla». Las de sí o no se marcan con un toque. El punto junto al nombre dice si va al día con lo esperado (verde, ámbar o rojo) y la ficha indica lo que le falta. Arriba aparece «Para ayudar a los chicos»: quién lleva dos meses sin ninguna actividad y lo pendiente del trimestre.'],
+  ['Chicos', 'Alta de chicos, su preceptor y si es de círculos o de charlas. Para pasar un chico a otro preceptor, cámbialo en su desplegable.'],
+  ['Informe', 'Los datos del mes o del trimestre y el histórico del curso, sin nombres. Se descarga en Excel o se guarda en PDF desde «Imprimir».'],
+  ['Dashboard', 'El semáforo muestra, por curso o por preceptor, cuántos chicos cumplen lo esperado en cada actividad. Debajo, los chicos que necesitan atención y la evolución mes a mes. Los preceptores ven solo su curso.'],
+  ['Avisos y recursos', 'En «Avisos» están los mensajes de los administradores; en «Recursos», los documentos para preparar círculos y charlas. Los días 25 y 30 aparece un recordatorio para poner los datos al día.'],
   ['Mi cuenta', 'Pulsa el círculo con tu inicial: cambiar la contraseña, sugerir una mejora, este manual y salir. Si sales de la app más de 2 minutos, al volver te pedirá entrar de nuevo. Si olvidas la contraseña, pide a un administrador un acceso nuevo.'],
-  ['Solo administradores', 'En «Actividades» se crean las actividades (semanal, mensual, trimestral, ocasional o anual). En «Usuarios», las cuentas de los preceptores. En el Dashboard, «Configurar dashboard» permite elegir los gráficos, el cómputo y el óptimo de cada actividad. En el Informe, «Configurar informe» permite elegir los datos. El administrador principal recibe las sugerencias en «Mejoras».']
+  ['Solo administradores', 'En «Actividades» se crean las actividades: cómo se apuntan (número o sí/no), cómo se calcula el total (suma, media por semana o nº de chicos que han ido) y lo esperado por chico al mes o al trimestre. Ahí también se puede borrar lo apuntado en un mes. En Chicos → Editar se puede eliminar un chico definitivamente, y en Usuarios, eliminar un usuario desactivado. El administrador principal recibe las sugerencias en «Mejoras».']
 ];
 const manualHtml = () => MANUAL.filter(([t]) => t !== 'Solo administradores' || esAdmin()).map(([t, x]) => `<details class="man"><summary>${t}</summary><p>${x}</p></details>`).join('');
 
@@ -1242,7 +1095,7 @@ function vistaUsuarios(){
     return `<li><span class="li-nom">${esc(u.nombre)}${u.activo === false ? ' <span class="estado-off">Desactivado</span>' : ''}<small>Usuario: ${esc(u.usuario || '')}${u.rol === 'responsable' ? `. ${n} ${n===1?'chico':'chicos'}` : `. ${rolTxt(u)}`}</small></span>
       ${edit && u.rol === 'responsable' && u.activo !== false ? `<label class="sel"><span class="vh">Curso de ${esc(u.nombre)}</span><select data-ch="ucurso" data-id="${u.id}">${CURSOS.map(c => `<option value="${c.id}" ${c.id===u.curso?'selected':''}>${c.corto}</option>`).join('')}</select></label>` : ''}
       ${edit && u.activo !== false ? `<button class="btn sec peq" data-a="uNuevoAcceso" data-id="${u.id}">Nuevo acceso</button>` : ''}
-      ${edit ? `<button class="btn sec peq" data-a="uActivo" data-id="${u.id}">${u.activo === false ? 'Activar' : 'Desactivar'}</button>` : ''}</li>`;
+      ${edit ? `<button class="btn sec peq" data-a="uActivo" data-id="${u.id}">${u.activo === false ? 'Activar' : 'Desactivar'}</button>` : ''}${esPrincipal() && u.activo === false && u.id !== S.profile.id ? `<button class="btn sec peq" data-a="uBorrar" data-id="${u.id}">Eliminar</button>` : ''}</li>`;
   };
   const admins = S.usuarios.filter(u => u.rol !== 'responsable').sort((a,b) => (a.rol === 'superadmin' ? -1 : b.rol === 'superadmin' ? 1 : porNombre(a,b)));
   return `${form}<section class="bloque"><div class="bloque-cab"><h2>Administración</h2></div><ul class="lista">${admins.map(fila).join('')}</ul></section>
@@ -1282,11 +1135,13 @@ const CLICK = {
     const cuerpo = `<label>Nombre<input name="nombre" required maxlength="60" value="${esc(x.nombre)}"></label>${esAdmin() ? `
       <label>Curso<select name="curso">${CURSOS.map(c => `<option value="${c.id}" ${c.id===x.curso?'selected':''}>${c.nombre}</option>`).join('')}</select></label>
       <p>Si le cambias de curso, queda sin preceptor hasta que le asignes uno nuevo.</p>
-      <label class="check"><input type="checkbox" name="baja"> Dar de baja (deja de aparecer en tablas y resúmenes)</label>` : ''}`;
+      <label class="check"><input type="checkbox" name="baja"> Dar de baja (deja de aparecer en tablas y resúmenes)</label>
+      <label class="check"><input type="checkbox" name="borrar"> Eliminar definitivamente, con todo lo apuntado</label>` : ''}`;
     const frs = S.eventos.filter(e => esSemanal(e) && e.porFrecuencia && aplica(e, x.curso)).sort(porNombre);
     const OPC = [[1,'Cada semana'],[2,'Cada dos semanas'],[4,'Una vez al mes'],[0,'No le toca']];
     const cuerpoF = frs.length ? `<p>Cada cuánto le toca:</p>${frs.map(e => { const v = (x.cada || {})[e.id] ?? 1; return `<label>${esc(e.nombre)}<select name="cada_${e.id}">${OPC.map(([n,t]) => `<option value="${n}" ${v === n ? 'selected' : ''}>${t}</option>`).join('')}</select></label>`; }).join('')}` : '';
     const fd = await modal('Editar chico', cuerpo + cuerpoF, 'Guardar cambios'); if(!fd) return;
+    if(esAdmin() && fd.get('borrar')){ guardar(() => borrarChicoTodo(x), `${x.nombre} eliminado`); return; }
     const datos = {nombre:String(fd.get('nombre')).trim() || x.nombre};
     if(frs.length){ datos.cada = {...(x.cada || {})}; frs.forEach(e => datos.cada[e.id] = +fd.get('cada_' + e.id)); }
     if(esAdmin()){ datos.curso = fd.get('curso'); if(datos.curso !== x.curso) datos.responsable = ''; if(fd.get('baja')) datos.activo = false; }
@@ -1340,6 +1195,17 @@ const CLICK = {
   ifMover(b){ const fs = leerFilasInforme(); const i = +b.dataset.i, j = i + +b.dataset.d; if(j < 0 || j >= fs.length) return; [fs[i], fs[j]] = [fs[j], fs[i]]; guardarFilas(fs); },
   ifQuitar(b){ guardarFilas(leerFilasInforme().filter((f,i) => i !== +b.dataset.i)); },
   ifAnadir(){ guardarFilas([...leerFilasInforme(), {id:nuevoId(), etiqueta:'Nuevo dato', medida:'suma', fuente:''}]); },
+  toggleAct(b){ const a = S.eventos.find(e => e.id === b.dataset.act); if(a) ponerNum(b.dataset.chico, a.id, num(b.dataset.chico, S.mes, a) > 0 ? 0 : 1); },
+  paso(b){ const a = S.eventos.find(e => e.id === b.dataset.act); if(a) ponerNum(b.dataset.chico, a.id, num(b.dataset.chico, S.mes, a) + +b.dataset.d); },
+  dashPor(b){ S.dashPor = b.dataset.v; render(); },
+  moverAct(b){ const acts = actividades(); const i = acts.findIndex(a => a.id === b.dataset.id); const j = i + +b.dataset.d; if(i < 0 || j < 0 || j >= acts.length) return;
+    guardar(async () => { const lista = [...acts]; [lista[i], lista[j]] = [lista[j], lista[i]]; for(let k = 0; k < lista.length; k++) if(lista[k].orden !== k + 1) await DB.set('eventos', lista[k].id, {orden:k + 1}, true); }); },
+  async editarAct(b){ const a = S.eventos.find(e => e.id === b.dataset.id); if(!a) return; const fd = await modal('Editar actividad', camposAct(a), 'Guardar cambios'); if(!fd) return;
+    const d = datosAct(fd); if(typeof d === 'string'){ toast(d); return; } guardar(() => DB.set('eventos', a.id, d, true), 'Cambios guardados'); },
+  async borrarAct(b){ const a = S.eventos.find(e => e.id === b.dataset.id); if(!a) return; const fd = await modal('Eliminar actividad', `<p>«${esc(a.nombre)}» desaparecerá de las tablas, el informe y el dashboard. Lo ya apuntado deja de verse.</p>`, 'Eliminar', true); if(fd) guardar(() => DB.del('eventos', a.id), 'Actividad eliminada'); },
+  async borrarChico(b){ const x = S.chicos.find(c => c.id === b.dataset.id); if(!x) return; const fd = await modal('Eliminar chico', `<p>Se borrará a ${esc(x.nombre)} y todo lo apuntado sobre él. No se puede deshacer.</p>`, 'Eliminar', true); if(fd) guardar(() => borrarChicoTodo(x), `${x.nombre} eliminado`); },
+  async uBorrar(b){ const u = S.usuarios.find(x => x.id === b.dataset.id); if(!u) return; const fd = await modal('Eliminar usuario', `<p>${esc(u.nombre)} desaparecerá de la lista y no podrá entrar. Sus chicos quedarán sin preceptor.</p>`, 'Eliminar', true); if(fd) guardar(() => DB.del('usuarios', u.id), 'Usuario eliminado'); },
+  async sgBorrarTodas(){ const fd = await modal('Borrar todas las sugerencias', `<p>Se borrarán las ${S.sugerencias.length} sugerencias. No se puede deshacer.</p>`, 'Borrar todas', true); if(fd) guardar(async () => { for(const x of S.sugerencias) await DB.del('sugerencias', x.id); }, 'Sugerencias borradas'); },
   vistaTipo(b){ S.vista = b.dataset.v; render(); },
   miMenu(){ const p = S.profile; menuModal(p.nombre, `<p class="nota" style="margin:0">${esc(rolTxt(p))}. Usuario: ${esc(p.usuario || '')}</p>
     <button class="btn sec" data-a="miCuenta" type="button">Cambiar mi contraseña</button><button class="btn sec" data-a="sugerir" type="button">Sugerir una mejora</button><button class="btn sec" data-a="manual" type="button">Manual de uso</button><button class="btn sec" data-a="salir" type="button">Salir</button>`); },
@@ -1378,8 +1244,8 @@ const SUBMIT = {
     try{
       const uid = await DB.registrarPrincipal(usuario, pass);
       await DB.set('usuarios', uid, {nombre, usuario, rol:'superadmin', curso:'', activo:true}, false);
-      await DB.set('eventos', 'tutoria', {tipo:'mensual', nombre:'Tutoría', cursos:[], desde:'', hasta:'', orden:1}, false);
-      await DB.set('eventos', 'padres', {tipo:'mensual', nombre:'Hablado con padres', cursos:[], desde:'', hasta:'', orden:2}, false);
+      await DB.set('eventos', 'padres', {v:2, nombre:'Conversación con padres', abrev:'padres', dato:'numero', total:'suma', esperado:1, periodo:'trimestre', grupo:'', cursos:[], orden:1}, false);
+      await DB.set('config', 'migracion', {v2:true}, false);
       await DB.set('config', 'arranque', {principal:uid, fecha:new Date().toISOString()}, false);
       S.arrancando = false; procesarAuth({uid});
     }catch(e){ console.error(e); S.arrancando = false; btn.disabled = false; msg.textContent = e.message || 'No se pudo completar la puesta en marcha.'; }
@@ -1419,6 +1285,12 @@ const SUBMIT = {
     if(!/^https:\/\//i.test(url)){ toast('El enlace debe empezar por https://'); return; } if(!cursos.length){ toast('Elige al menos un curso.'); return; }
     if(await guardar(() => DB.set('config', 'recursos', {items:[...(cfgDoc('recursos').items || []), {id:nuevoId(), titulo, url, cursos:cursos.length === CURSOS.length ? [] : cursos}]}, true), 'Documento añadido')) finForm(f);
   },
+  async nuevaAct(f){ const d = datosAct(new FormData(f)); if(typeof d === 'string'){ toast(d); return; } d.orden = actividades().length + 1;
+    if(await guardar(() => DB.add('eventos', d), `«${d.nombre}» creada`)) finForm(f); },
+  async borrarMes(f){ const fd = new FormData(f); const m = fd.get('mes'); const c = fd.get('curso'); if(!m) return;
+    const rs = S.registros.filter(r => r.mes === m && (c === 'todos' || r.curso === c));
+    const ok = await modal('Borrar ' + mesLargo(m), `<p>Se borrará lo apuntado de ${rs.length} chicos en ${mesLargo(m)} (${c === 'todos' ? 'todos los cursos' : cursoNombre(c)}). No se puede deshacer.</p>`, 'Borrar', true); if(!ok) return;
+    await guardar(async () => { for(const r of rs) await DB.del('registros', r.id); }, 'Mes borrado'); if(document.activeElement) document.activeElement.blur(); render(); },
   async informe(f){ if(await guardarFilas(leerFilasInforme())) toast('Informe guardado'); if(document.activeElement) document.activeElement.blur(); render(); },
   async nuevoWidget(f){
     const fd = new FormData(f); const tipo = fd.get('tipo');
@@ -1443,6 +1315,8 @@ const SUBMIT = {
 const CHANGE = {
   filtroResp(t){ S.filtroResp = t.value; render(); },
   anio(t){ S.anio = +t.value; render(); },
+  num(t){ ponerNum(t.dataset.chico, t.dataset.act, +t.value); },
+  dashAct(t){ S.dashAct = t.value; render(); },
   infNombres(t){ S.infNombres = t.checked; render(); },
   resp(t){ const x = S.chicos.find(c => c.id === t.dataset.id); if(!x) return; const n = nombreUsuario(t.value);
     guardar(() => DB.set('chicos', x.id, {responsable:t.value}, true), t.value ? `${x.nombre} pasa a ${n}` : `${x.nombre} queda sin preceptor`); },
