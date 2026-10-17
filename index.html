@@ -248,6 +248,15 @@ legend{font-size:.88rem;font-weight:600;color:var(--muted);margin-bottom:.4rem}
   .tabla .nom{position:static;min-width:0}
   .ind{padding:2mm 3mm} .ind b{font-size:14pt}
 }
+.area{font:inherit;border:1px solid var(--line);border-radius:9px;padding:.5rem;background:var(--surface);color:var(--ink);width:100%}
+.nuevo{display:inline-block;background:var(--star);color:#1B2A4E;border-radius:6px;padding:0 .4rem;font-size:.75rem;font-weight:700}
+.m-tit{margin:.4rem 0 0;font-family:var(--display);font-size:1rem}
+.m-aviso{margin:0;white-space:pre-wrap}
+.m-aviso small{display:block;color:var(--muted);font-size:.8rem}
+.man{border:1px solid var(--line);border-radius:10px;padding:.55rem .75rem}
+.man summary{cursor:pointer;font-weight:600}
+.man p{margin:.5rem 0 0;color:var(--ink)}
+@media print{ .w-chicos,.w-ctrl{display:none!important} .dash{display:block} .dash .bloque{margin-bottom:5mm} }
 .yo{background:none;border:0;color:inherit;text-align:right;cursor:pointer;padding:.2rem .3rem;border-radius:8px}
 .yo:hover{background:var(--night-2)}
 .tab.sugerir{margin-left:auto;color:var(--star-on-night)}
@@ -587,7 +596,7 @@ async function procesarAuth(u){
 function pararEscuchas(){ S.unsubs.forEach(f => { try{ f(); }catch(e){} }); S.unsubs = []; }
 function iniciarEscuchas(){
   const adm = esAdmin(); const f = adm ? null : ['curso', S.profile.curso];
-  S.curso = adm ? 'todos' : S.profile.curso; S.filtroResp = 'todos'; S.modo = 'semana'; S.semana = lunesDe(hoyISO()); S.mes = hoyMes(); S.view = 'seguimiento'; S.dashEdit = false;
+  S.curso = adm ? 'todos' : S.profile.curso; S.filtroResp = 'todos'; S.modo = 'semana'; S.semana = lunesDe(hoyISO()); S.mes = hoyMes(); S.view = 'seguimiento'; S.dashEdit = false; S.popups = false; S.periodo = 'mes';
   const listo = {}; const need = ['usuarios','chicos','eventos','registros','config'];
   if(esPrincipal()) need.push('sugerencias'); else S.sugerencias = [];
   const on = col => docs => {
@@ -650,6 +659,8 @@ function renderSinAcceso(t){
 /* ============================ Render principal ============================ */
 function tabsDisponibles(){
   const t = [{id:'seguimiento',nombre:'Acompañamiento',corto:'Acompañar'},{id:'chicos',nombre:'Chicos'},{id:'resumen',nombre:'Informe',corto:'Informe'},{id:'dashboard',nombre:'Dashboard'}];
+  const nAv = S.profile ? avisosSinLeer().length : 0;
+  t.push({id:'avisos',nombre:'Avisos' + (nAv ? ` (${nAv})` : '')},{id:'recursos',nombre:'Recursos'});
   if(esAdmin()) t.push({id:'eventos',nombre:'Actividades'},{id:'usuarios',nombre:'Usuarios'});
   if(esPrincipal()){ const n = S.sugerencias.filter(s => s.estado !== 'vista').length; t.push({id:'mejoras',nombre:'Mejoras' + (n ? ` (${n})` : '')}); }
   return t;
@@ -669,6 +680,7 @@ function render(){
   if(foco){ const el = document.querySelector(`[data-foco="${CSS.escape(foco)}"]`); if(el) el.focus({preventScroll:true}); }
   window.scrollTo(0, y);
   if(S.view === 'dashboard') dibujarGraficos();
+  if(!S.popups){ S.popups = true; setTimeout(revisarAvisos, 300); }
 }
 const ICONOS = {seguimiento:'<path d="M4 6h16M4 12h16M4 18h10"/>', chicos:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5a3 3 0 0 1 0 6M21 20c0-2.6-1.7-4.8-4-5.6"/>', resumen:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>', dashboard:'<path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/>', mas:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'};
 const ico = k => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONOS[k]}</svg>`;
@@ -909,17 +921,22 @@ function valorFila(f, ch, meses){
 function vistaInforme(){
   const cursos = cursosSel(); const ch = cursos.flatMap(chicosDe); const filas = filasInforme();
   const y = cursoEscolarDe(S.mes); const meses = mesesCurso(y); const ambito = cursos.length > 1 ? 'Todos los cursos' : cursoNombre(cursos[0]);
+  const trim = S.periodo === 'trim'; const sel = trim ? mesesTrim(S.mes) : [S.mes]; const titulo = trim ? `Trimestre ${textoTrim(S.mes)} ${S.mes.slice(0,4)}` : cap(mesLargo(S.mes));
   const cards = filas.map(f => {
     const falta = f.fuente && !['chicos'].includes(f.medida) && !f.medida.startsWith('ficha:') && !eventosDeFuente(f.fuente).length;
-    let det = ''; if(f.medida === 'media_semana'){ const evs = eventosDeFuente(f.fuente); const ws = semanasDe(evs, [S.mes]); if(ws.length) det = `<small>${ws.map(w => `${semanaCorta(w.l)}: ${asistSemana(ch, evs, w)}`).join('; ')}</small>`; }
-    return `<li class="ind"><span>${esc(f.etiqueta)}${falta ? `<small class="aviso-f">No hay ninguna actividad llamada «${esc(f.fuente)}»</small>` : ''}${det}</span><b>${fmt(valorFila(f, ch, [S.mes]))}</b></li>`; }).join('');
+    let det = ''; if(f.medida === 'media_semana'){ const evs = eventosDeFuente(f.fuente); const ws = semanasDe(evs, sel); if(ws.length) det = `<small>${ws.map(w => `${semanaCorta(w.l)}: ${asistSemana(ch, evs, w)}`).join('; ')}</small>`; }
+    return `<li class="ind"><span>${esc(f.etiqueta)}${falta ? `<small class="aviso-f">No hay ninguna actividad llamada «${esc(f.fuente)}»</small>` : ''}${det}</span><b>${fmt(valorFila(f, ch, sel))}</b></li>`; }).join('');
   const tabla = (cols, celda, ultima, id) => `<div class="tabla-wrap" data-scroll="${id}"><table class="tabla hist"><thead><tr><th class="nom">Dato</th>${cols.map(c => `<th class="${c.on ? 'mes-act' : ''}">${c.t}</th>`).join('')}<th>${ultima}</th></tr></thead><tbody>${filas.map(f => `<tr><th class="nom" scope="row"><span>${esc(f.etiqueta)}</span></th>${cols.map(c => `<td class="${c.on ? 'mes-act' : ''}">${celda(f, c)}</td>`).join('')}<td><b>${celda(f, null)}</b></td></tr>`).join('')}</tbody></table></div>`;
-  const hist = tabla(meses.map(m => ({m, t:cap(MESES[+m.slice(5)-1].slice(0,3)), on:m === S.mes})), (f,c) => c ? (c.m > hoyMes() ? '' : fmt(valorFila(f, ch, [c.m]))) : fmt(valorFila(f, ch, meses)), 'Curso', 'hist');
-  const porCurso = cursos.length > 1 ? `<section class="bloque"><div class="bloque-cab"><h2>Por curso, ${mesLargo(S.mes)}</h2></div>${tabla(cursos.map(c => ({c, t:cortoCurso(c)})), (f,c) => fmt(valorFila(f, c ? chicosDe(c.c) : ch, [S.mes])), 'Total', 'pc')}</section>` : '';
-  return `<div class="barra no-print">${ctrlMes()}${ctrlCurso()}<button class="btn" data-a="excelInforme">Descargar Excel</button><button class="btn sec" data-a="imprimir">Imprimir o guardar PDF</button>${esAdmin() ? `<button class="btn sec" data-a="infEditar">${S.infEdit ? 'Terminar' : 'Configurar informe'}</button>` : ''}</div>
+  const hist = tabla(meses.map(m => ({m, t:cap(MESES[+m.slice(5)-1].slice(0,3)), on:sel.includes(m)})), (f,c) => c ? (c.m > hoyMes() ? '' : fmt(valorFila(f, ch, [c.m]))) : fmt(valorFila(f, ch, meses)), 'Curso', 'hist');
+  const porCurso = cursos.length > 1 ? `<section class="bloque"><div class="bloque-cab"><h2>Por curso: ${titulo.toLowerCase()}</h2></div>${tabla(cursos.map(c => ({c, t:cortoCurso(c)})), (f,c) => fmt(valorFila(f, c ? chicosDe(c.c) : ch, sel)), 'Total', 'pc')}</section>` : '';
+  const per = `<div class="seg" role="group" aria-label="Periodo"><button class="${!trim?'on':''}" data-a="periodo" data-v="mes" aria-pressed="${!trim}">Mes</button><button class="${trim?'on':''}" data-a="periodo" data-v="trim" aria-pressed="${trim}">Trimestre</button></div>`;
+  const ctrlP = trim ? `<div class="mesnav"><button class="icono" data-a="mes" data-d="-3" aria-label="Trimestre anterior">‹</button><span class="mes-label">${titulo}</span><button class="icono" data-a="mes" data-d="3" aria-label="Trimestre siguiente">›</button></div>` : ctrlMes();
+  const prevT = mesMas(mesInicioTrim(hoyMes()), -3);
+  const aviso = esAdmin() && [1,4,7,10].includes(+hoyMes().slice(5)) && !(trim && S.mes === prevT) ? `<div class="pendientes no-print" style="margin-bottom:1rem">Ya puedes revisar el informe del trimestre ${textoTrim(prevT)}. <button class="btn sec peq" data-a="verTrim">Ver informe trimestral</button></div>` : '';
+  return `${aviso}<div class="barra no-print">${per}${ctrlP}${ctrlCurso()}<button class="btn" data-a="excelInforme">Descargar Excel</button><button class="btn sec" data-a="imprimir">Imprimir o guardar PDF</button>${esAdmin() ? `<button class="btn sec" data-a="infEditar">${S.infEdit ? 'Terminar' : 'Configurar informe'}</button>` : ''}</div>
     ${S.infEdit && esAdmin() ? panelInforme(filas) : ''}
-    <h1 class="solo-print">E6 Mizar. Informe de ${mesLargo(S.mes)}. ${ambito}</h1>
-    <section class="bloque"><div class="bloque-cab"><h2>${cap(mesLargo(S.mes))}</h2><span class="meta">${ambito}</span></div><ul class="inds">${cards}</ul></section>
+    <h1 class="solo-print">E6 Mizar. Informe: ${titulo}. ${ambito}</h1>
+    <section class="bloque"><div class="bloque-cab"><h2>${titulo}</h2><span class="meta">${ambito}</span></div><ul class="inds">${cards}</ul></section>
     <section class="bloque"><div class="bloque-cab"><h2>Histórico del curso ${y}-${String(y+1).slice(2)}</h2><span class="meta">${ambito}</span></div>${hist}
       <p class="nota">«Curso» es el acumulado de septiembre a hoy; en las medias, la media de todas las semanas. El nº de chicos y los de círculos o charlas usan los datos actuales de las fichas.</p></section>${porCurso}`;
 }
@@ -940,8 +957,9 @@ const guardarFilas = fs => guardar(() => DB.set('config', 'informe', {filas:fs},
 function excelInforme(){
   if(typeof XLSX === 'undefined'){ toast('No se pudo cargar el generador de Excel. Revisa la conexión.'); return; }
   const cursos = cursosSel(); const y = cursoEscolarDe(S.mes); const meses = mesesCurso(y); const filas = filasInforme(); const wb = XLSX.utils.book_new();
-  const hoja = ch => { const aoa = [['Dato', ...meses.map(m => cap(MESES[+m.slice(5)-1]) + ' ' + m.slice(0,4)), 'Curso escolar']];
-    filas.forEach(f => aoa.push([f.etiqueta, ...meses.map(m => m > hoyMes() ? '' : (valorFila(f, ch, [m]) ?? '')), valorFila(f, ch, meses) ?? '']));
+  const g = {}; meses.forEach(m => (g[mesInicioTrim(m)] = g[mesInicioTrim(m)] || []).push(m)); const trims = Object.entries(g);
+  const hoja = ch => { const aoa = [['Dato', ...meses.map(m => cap(MESES[+m.slice(5)-1]) + ' ' + m.slice(0,4)), ...trims.map(([k]) => 'Trim. ' + textoTrim(k)), 'Curso escolar']];
+    filas.forEach(f => aoa.push([f.etiqueta, ...meses.map(m => m > hoyMes() ? '' : (valorFila(f, ch, [m]) ?? '')), ...trims.map(([k, ms]) => ms[0] > hoyMes() ? '' : (valorFila(f, ch, ms) ?? '')), valorFila(f, ch, meses) ?? '']));
     const h = XLSX.utils.aoa_to_sheet(aoa); h['!cols'] = [{wch:46}, ...meses.map(() => ({wch:12})), {wch:14}]; return h; };
   const nom = c => cursoNombre(c).replace(/[:\\/?*\[\]]/g,'').slice(0,31);
   XLSX.utils.book_append_sheet(wb, hoja(cursos.flatMap(chicosDe)), cursos.length > 1 ? 'Total' : nom(cursos[0]));
@@ -966,7 +984,7 @@ function tasaEv(e, chicos, meses){
   const cc = chicos.filter(x => aplica(e, x.curso)); const t = tipoDe(e); let si = 0, tot = 0; const vistos = new Set();
   const una = (mm, key) => { if(vistos.has(mm) || mm > hoyMes()) return; vistos.add(mm); tot += cc.length; cc.forEach(x => { if(valor(x.id, mm, key) === 'si') si++; }); };
   meses.filter(m => m <= hoyMes()).forEach(m => {
-    if(t === 'semanal'){ const n = semanasComputables(e, m).length; tot += n * cc.length; if(n) cc.forEach(x => si += agregado(x.id, e, m).si); }
+    if(t === 'semanal'){ const n = semanasComputables(e, m).length; if(!n) return; cc.forEach(x => { const r = agregado(x.id, e, m).si; if(e.porFrecuencia){ const cada = (x.cada || {})[e.id] ?? 1; if(!cada) return; const esp = Math.ceil(n / cada); tot += esp; si += Math.min(r, esp); } else { tot += n; si += r; } }); }
     else if(t === 'mensual'){ if(activaMes(e, m)) una(m, 'a_'+e.id); }
     else if(t === 'trimestral'){ if(activaTrim(e, m)) una(mesInicioTrim(m), 't_'+e.id); }
     else if(anualSinFecha(e)){ una(mesAnualSF(m), 'y_'+e.id); }
@@ -995,7 +1013,7 @@ function vistaDashboard(){
   S.graficos = [];
   const ws = widgetsActuales();
   const cuerpo = ws.length ? ws.map((w,i) => widget(w, i, ws.length, cursos, meses, vs)).join('') : vacio(esAdmin() ? 'El dashboard está vacío. Pulsa «Configurar dashboard» para añadir gráficos.' : 'El administrador todavía no ha configurado el dashboard.');
-  return `<div class="barra">${ctrl}${ctrlCurso()}${esAdmin() ? `<button class="btn ${S.dashEdit ? '' : 'sec'}" data-a="dashEditar">${S.dashEdit ? 'Terminar configuración' : 'Configurar dashboard'}</button>` : ''}</div>
+  return `<div class="barra">${ctrl}${ctrlCurso()}<button class="btn sec no-print" data-a="excelDashboard">Descargar Excel</button><button class="btn sec no-print" data-a="imprimir">Imprimir o guardar PDF</button>${esAdmin() ? `<button class="btn ${S.dashEdit ? '' : 'sec'} no-print" data-a="dashEditar">${S.dashEdit ? 'Terminar configuración' : 'Configurar dashboard'}</button>` : ''}</div>
     ${S.dashEdit && esAdmin() ? panelDash(vs) : ''}
     <p class="ayuda">Datos acumulados del curso escolar hasta hoy. Verde: cumple el objetivo. Ámbar: a menos de un 20 % de él. Rojo: por debajo.</p>
     <div class="dash">${cuerpo}</div>`;
@@ -1008,8 +1026,8 @@ function panelDash(vs){
       <label>Título (opcional)<input name="titulo" maxlength="60" autocomplete="off"></label>
       <button class="btn" type="submit">Añadir gráfico</button></div></form>
     <form class="panel" data-f="objetivos"><h3>Cómputo y asistencia óptima de cada actividad</h3>
-      <p class="nota" style="margin:0 0 .6rem">Indica el porcentaje que consideras óptimo. Semanal: 100 % es todas las semanas y 75 % es 3 de cada 4. Mensual: 100 % es todos los meses. Anual: porcentaje de chicos que deberían asistir. Déjalo vacío si no quieres objetivo.</p>
-      ${vs.length ? `<div class="envoltura"><table class="datos"><thead><tr><th>Actividad</th><th>Tipología</th><th>Cómputo mensual</th><th>Óptimo (%)</th></tr></thead><tbody>${vs.map(v => `<tr><td>${esc(v.nombre)}</td><td>${cap(v.tipo)}</td><td>${v.tipo === 'semanal' ? `<select name="agr_${v.id}" aria-label="Cómputo de ${esc(v.nombre)}">${Object.entries(AGREG).map(([k,t]) => `<option value="${k}" ${(v.evs[0].agregacion || 'suma') === k ? 'selected' : ''}>${t}</option>`).join('')}</select>` : '—'}</td><td><input type="number" name="obj_${v.id}" min="0" max="100" step="1" value="${v.objetivo ?? ''}" style="width:6rem" aria-label="Óptimo de ${esc(v.nombre)}"></td></tr>`).join('')}</tbody></table></div>
+      <p class="nota" style="margin:0 0 .6rem">Indica el porcentaje que consideras óptimo. Semanal: 100 % es todas las semanas y 75 % es 3 de cada 4; con «Frecuencia de cada chico», 100 % es que cada uno cumple la suya (se indica en Chicos, «Editar»). Mensual: 100 % es todos los meses. Anual: porcentaje de chicos que deberían asistir. Déjalo vacío si no quieres objetivo.</p>
+      ${vs.length ? `<div class="envoltura"><table class="datos"><thead><tr><th>Actividad</th><th>Tipología</th><th>Cómputo mensual</th><th>Medir por</th><th>Óptimo (%)</th></tr></thead><tbody>${vs.map(v => `<tr><td>${esc(v.nombre)}</td><td>${cap(v.tipo)}</td><td>${v.tipo === 'semanal' ? `<select name="agr_${v.id}" aria-label="Cómputo de ${esc(v.nombre)}">${Object.entries(AGREG).map(([k,t]) => `<option value="${k}" ${(v.evs[0].agregacion || 'suma') === k ? 'selected' : ''}>${t}</option>`).join('')}</select>` : '—'}</td><td>${v.tipo === 'semanal' ? `<select name="frq_${v.id}" aria-label="Cómo medir ${esc(v.nombre)}"><option value="0">% de semanas</option><option value="1" ${v.evs[0].porFrecuencia ? 'selected' : ''}>Frecuencia de cada chico</option></select>` : '—'}</td><td><input type="number" name="obj_${v.id}" min="0" max="100" step="1" value="${v.objetivo ?? ''}" style="width:6rem" aria-label="Óptimo de ${esc(v.nombre)}"></td></tr>`).join('')}</tbody></table></div>
       <button class="btn" type="submit" style="margin-top:.7rem">Guardar objetivos</button>` : vacio('Crea primero actividades en la pestaña Actividades.')}</form>`;
 }
 function widget(w, i, n, cursos, meses, vs){
@@ -1027,7 +1045,7 @@ function widget(w, i, n, cursos, meses, vs){
   }
   if(w.tipo === 'chicos'){
     const filas = ch.map(x => { const r = tasa(v, [x], meses); return {x, r, est:estado(r.p, v.objetivo)}; }).filter(f => f.r.tot).sort((a,b) => porNombre(a.x, b.x));
-    return `<section class="bloque w w-ancho">${cab}${filas.length ? `<div class="envoltura"><table class="datos"><thead><tr><th>Chico</th>${cursos.length > 1 ? '<th>Curso</th>' : ''}<th>Preceptor</th><th>Real</th></tr></thead><tbody>${
+    return `<section class="bloque w w-ancho w-chicos">${cab}${filas.length ? `<div class="envoltura"><table class="datos"><thead><tr><th>Chico</th>${cursos.length > 1 ? '<th>Curso</th>' : ''}<th>Preceptor</th><th>Real</th></tr></thead><tbody>${
       filas.map(f => `<tr class="fila-${f.est}"><td>${esc(f.x.nombre)}</td>${cursos.length > 1 ? `<td>${cortoCurso(f.x.curso)}</td>` : ''}<td>${esc(nombreResp(f.x))}</td><td class="n">${f.r.si}/${f.r.tot} ${pctTxt(f.r.p)}${barraMini(f.r.p)}</td></tr>`).join('')}</tbody></table></div>` : vacio('Todavía no hay datos.')}
       <p class="nota">${v.objetivo !== null ? `Óptimo ${v.objetivo} %. ` : ''}En rojo, por debajo del óptimo.</p></section>`;
   }
@@ -1056,6 +1074,16 @@ function widget(w, i, n, cursos, meses, vs){
     return `<section class="bloque w">${cab}<div class="grafico" style="height:${Math.max(220, evs.length * 30 + 60)}px"><canvas id="${id}"></canvas></div></section>`;
   }
   return '';
+}
+function excelDashboard(){
+  if(typeof XLSX === 'undefined'){ toast('No se pudo cargar el generador de Excel. Revisa la conexión.'); return; }
+  const cursos = cursosSel(); const meses = mesesCurso(S.anio); const vs = variables(); const ch = cursos.flatMap(chicosDe); const wb = XLSX.utils.book_new();
+  const a1 = [['Actividad','Tipología','Óptimo (%)','Real (%)','Hechas','Posibles', ...cursos.map(c => cortoCurso(c) + ' (%)')]];
+  vs.forEach(v => { const r = tasa(v, ch, meses); a1.push([v.nombre, v.tipo, v.objetivo ?? '', r.p ?? '', r.si, r.tot, ...cursos.map(c => tasa(v, chicosDe(c), meses).p ?? '')]); });
+  const h1 = XLSX.utils.aoa_to_sheet(a1); h1['!cols'] = [{wch:30},{wch:12},{wch:11},{wch:10},{wch:9},{wch:9}]; XLSX.utils.book_append_sheet(wb, h1, 'Resumen');
+  const a2 = [['Actividad (%)', ...meses.map(m => cap(MESES[+m.slice(5)-1]))]]; vs.forEach(v => a2.push([v.nombre, ...meses.map(m => m > hoyMes() ? '' : (tasa(v, ch, [m]).p ?? ''))]));
+  const h2 = XLSX.utils.aoa_to_sheet(a2); h2['!cols'] = [{wch:30}]; XLSX.utils.book_append_sheet(wb, h2, 'Evolución mensual');
+  XLSX.writeFile(wb, `E6-Mizar-dashboard-${S.anio}-${S.anio+1}.xlsx`); toast('Excel descargado');
 }
 function dibujarGraficos(){
   if(typeof Chart === 'undefined'){ document.querySelectorAll('.grafico').forEach(g => g.innerHTML = '<p class="nota">No se pudo cargar la librería de gráficos.</p>'); return; }
@@ -1149,6 +1177,54 @@ function vistaEventos(){
     ${sec('Ocasionales', S.eventos.filter(esOcasional).sort((a,b) => porNombre(a,b) || desc(a,b)), e => `${fechaLarga(e.fecha)}. ${textoCursos(e)}`, 'No hay actividades ocasionales.')}
     ${sec('Anuales', S.eventos.filter(e => tipoDe(e) === 'anual').sort(desc), e => `${e.fecha ? fechaLarga(e.fecha) : 'Sin fecha: una vez cada curso'}. ${textoCursos(e)}`, 'No hay actividades anuales.')}`;
 }
+/* ============================ Avisos, recursos y manual ============================ */
+const cfgDoc = id => S.config.find(d => d.id === id) || {};
+const leidos = () => { try{ return JSON.parse(localStorage.getItem('e6-leidos-' + S.user.uid) || '[]'); }catch(e){ return S._leidos || []; } };
+function marcarLeidos(ids){ const l = [...new Set([...leidos(), ...ids])].slice(-300); S._leidos = l; try{ localStorage.setItem('e6-leidos-' + S.user.uid, JSON.stringify(l)); }catch(e){} }
+const paraMi = a => !a.cursos || !a.cursos.length || esAdmin() || a.cursos.includes(S.profile.curso);
+const avisosVisibles = () => (cfgDoc('avisos').items || []).filter(paraMi).sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+const avisosSinLeer = () => { const l = new Set(leidos()); return avisosVisibles().filter(a => !l.has(a.id)); };
+function vistaAvisos(){
+  const av = avisosVisibles(); const nuevos = new Set(avisosSinLeer().map(a => a.id)); setTimeout(() => marcarLeidos(av.map(a => a.id)), 0);
+  const form = esAdmin() ? `<form class="panel" data-f="nuevoAviso"><h3>Enviar un aviso a los preceptores</h3>
+    <label>Mensaje<textarea name="texto" required maxlength="800" rows="4" class="area"></textarea></label>
+    <fieldset><legend>Para qué cursos</legend><div class="cursos-check">${checksCursos(null)}</div></fieldset>
+    <button class="btn" type="submit">Enviar aviso</button><p class="nota">Les aparecerá al entrar en la app. Además, los días 25 y 30 de cada mes todos reciben un recordatorio automático para poner los datos al día.</p></form>` : '';
+  return `${form}<h2 class="seccion">Avisos</h2>${av.length ? `<section class="bloque"><ul class="lista">${av.map(a => `<li><span class="li-nom" style="white-space:pre-wrap">${nuevos.has(a.id) ? '<span class="nuevo">Nuevo</span> ' : ''}${esc(a.texto)}<small>${esc(a.nombre || '')}, ${a.fecha ? fechaLarga(a.fecha.slice(0,10)) : ''}${a.cursos && a.cursos.length ? '. ' + a.cursos.map(cortoCurso).join(', ') : ''}</small></span>${esAdmin() ? `<button class="btn sec peq" data-a="borrarAviso" data-id="${a.id}">Eliminar</button>` : ''}</li>`).join('')}</ul></section>` : vacio('No hay avisos.')}`;
+}
+const recursosVisibles = () => (cfgDoc('recursos').items || []).filter(paraMi);
+function vistaRecursos(){
+  const rs = recursosVisibles();
+  const form = esAdmin() ? `<form class="panel" data-f="nuevoRecurso"><h3>Añadir un documento</h3><div class="campos">
+    <label>Título<input name="titulo" required maxlength="80" autocomplete="off" placeholder="Por ejemplo, Guion para círculos"></label>
+    <label>Enlace<input name="url" required type="url" placeholder="https://drive.google.com/…"></label></div>
+    <fieldset><legend>Para qué cursos</legend><div class="cursos-check">${checksCursos(null)}</div></fieldset>
+    <button class="btn" type="submit">Añadir documento</button><p class="nota">Para que los preceptores puedan abrirlo, en Drive debe estar compartido como «Cualquier persona con el enlace puede ver».</p></form>` : '';
+  return `${form}<h2 class="seccion">Documentos para los preceptores</h2>${rs.length ? `<section class="bloque"><ul class="lista">${rs.map(r => `<li><span class="li-nom">${esc(r.titulo)}<small>${r.cursos && r.cursos.length ? r.cursos.map(cortoCurso).join(', ') : 'Todos los cursos'}</small></span><a class="btn peq" href="${esc(r.url)}" target="_blank" rel="noopener">Abrir</a>${esAdmin() ? `<button class="btn sec peq" data-a="borrarRecurso" data-id="${r.id}">Eliminar</button>` : ''}</li>`).join('')}</ul></section>` : vacio(esAdmin() ? 'Añade el primer documento con el formulario de arriba.' : 'Todavía no hay documentos.')}`;
+}
+function revisarAvisos(){
+  const partes = []; const sinLeer = avisosSinLeer();
+  if(sinLeer.length) partes.push(`<h4 class="m-tit">Avisos nuevos</h4>${sinLeer.slice(0,5).map(a => `<p class="m-aviso">${esc(a.texto)}<small>${esc(a.nombre || '')}, ${a.fecha ? fechaLarga(a.fecha.slice(0,10)) : ''}</small></p>`).join('')}`);
+  const d = new Date(); const dia = d.getDate(); const ultimo = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+  const llevaChicos = S.profile.rol === 'responsable' || S.chicos.some(x => x.responsable === S.profile.id);
+  const kRec = 'e6-rec-' + hoyISO(); let vistoRec = false; try{ vistoRec = !!localStorage.getItem(kRec); }catch(e){}
+  if(llevaChicos && (dia === 25 || dia === Math.min(30, ultimo)) && !vistoRec){ partes.push(`<h4 class="m-tit">Recordatorio</h4><p class="m-aviso">Se acaba el mes: revisa que tienes al día lo de tus chicos en Acompañamiento.</p><button class="btn" data-a="vista" data-v="seguimiento" type="button">Ir a Acompañamiento</button>`); try{ localStorage.setItem(kRec, '1'); }catch(e){} }
+  const mm = +hoyMes().slice(5); const kTr = 'e6-trim-' + hoyMes(); let vistoTr = false; try{ vistoTr = !!localStorage.getItem(kTr); }catch(e){}
+  if(esAdmin() && [1,4,7,10].includes(mm) && dia <= 10 && !vistoTr){ partes.push(`<h4 class="m-tit">Informe trimestral</h4><p class="m-aviso">Ya puedes revisar el informe del trimestre ${textoTrim(mesMas(mesInicioTrim(hoyMes()), -3))}.</p><button class="btn" data-a="verTrim" type="button">Ver informe trimestral</button>`); try{ localStorage.setItem(kTr, '1'); }catch(e){} }
+  if(partes.length){ marcarLeidos(sinLeer.map(a => a.id)); menuModal('Hola, ' + S.profile.nombre, partes.join('')); }
+}
+const MANUAL = [
+  ['Para qué sirve', 'E6 Mizar es la app del preceptor: cada preceptor anota lo que hace cada uno de sus chicos, y los administradores ven el conjunto en el Informe y el Dashboard.'],
+  ['Acompañamiento', 'Aquí se marca. En «Semana» se apuntan las actividades semanales y las que tienen fecha; en «Mes», las mensuales, las trimestrales y las del curso. Toca para poner o quitar el ✓. «Fichas» muestra una tarjeta por chico (cómoda en el móvil); «Tabla», todo en filas. «Mis chicos» o «Todo el curso» cambia a quién ves.'],
+  ['Chicos', 'Alta de chicos, su preceptor y si es de círculos o de charlas. Para pasar un chico a otro preceptor, cámbialo en su desplegable. En «Editar» se indica, si procede, cada cuánto le toca una actividad (por ejemplo, la tutoría cada semana o cada dos).'],
+  ['Informe', 'Los datos del mes o del trimestre y el histórico del curso, sin nombres. Se puede descargar en Excel o guardar en PDF desde «Imprimir».'],
+  ['Dashboard', 'Gráficos de cada actividad frente a su óptimo: verde cumple, ámbar está cerca, rojo por debajo. Los preceptores ven solo su curso.'],
+  ['Avisos y recursos', 'En «Avisos» están los mensajes de los administradores; en «Recursos», los documentos para preparar los círculos y charlas. Los días 25 y 30 aparece un recordatorio para poner los datos al día.'],
+  ['Mi cuenta', 'Pulsa el círculo con tu inicial: cambiar la contraseña, sugerir una mejora, este manual y salir. Si sales de la app más de 2 minutos, al volver te pedirá entrar de nuevo. Si olvidas la contraseña, pide a un administrador un acceso nuevo.'],
+  ['Solo administradores', 'En «Actividades» se crean las actividades (semanal, mensual, trimestral, ocasional o anual). En «Usuarios», las cuentas de los preceptores. En el Dashboard, «Configurar dashboard» permite elegir los gráficos, el cómputo y el óptimo de cada actividad. En el Informe, «Configurar informe» permite elegir los datos. El administrador principal recibe las sugerencias en «Mejoras».']
+];
+const manualHtml = () => MANUAL.filter(([t]) => t !== 'Solo administradores' || esAdmin()).map(([t, x]) => `<details class="man"><summary>${t}</summary><p>${x}</p></details>`).join('');
+
 /* ============================ Usuarios (admin) ============================ */
 function puedeEditarUsuario(u){ if(u.id === S.profile.id) return false; if(esPrincipal()) return true; return esAdmin() && u.rol === 'responsable'; }
 function vistaUsuarios(){
@@ -1174,7 +1250,7 @@ function vistaUsuarios(){
       return `<section class="bloque">${cabBloque(c.id, `<span class="meta">${rs.filter(r => r.activo !== false).length} preceptores</span>`)}${rs.length ? `<ul class="lista">${rs.map(fila).join('')}</ul>` : vacio('Sin preceptores. Dalos de alta con el formulario de arriba.')}</section>`; }).join('')}`;
 }
 
-const VISTAS = {seguimiento:vistaSeguimiento, chicos:vistaChicos, resumen:vistaInforme, dashboard:vistaDashboard, eventos:vistaEventos, usuarios:vistaUsuarios, mejoras:vistaMejoras};
+const VISTAS = {seguimiento:vistaSeguimiento, chicos:vistaChicos, resumen:vistaInforme, avisos:vistaAvisos, recursos:vistaRecursos, dashboard:vistaDashboard, eventos:vistaEventos, usuarios:vistaUsuarios, mejoras:vistaMejoras};
 
 /* ============================ Acciones ============================ */
 async function guardar(fn, ok){ try{ await fn(); if(ok) toast(ok); return true; }catch(e){ console.error(e); toast(e && e.message && !/permission/i.test(e.message) ? e.message : 'No se pudo guardar. Comprueba la conexión o tus permisos.'); return false; } }
@@ -1207,8 +1283,12 @@ const CLICK = {
       <label>Curso<select name="curso">${CURSOS.map(c => `<option value="${c.id}" ${c.id===x.curso?'selected':''}>${c.nombre}</option>`).join('')}</select></label>
       <p>Si le cambias de curso, queda sin preceptor hasta que le asignes uno nuevo.</p>
       <label class="check"><input type="checkbox" name="baja"> Dar de baja (deja de aparecer en tablas y resúmenes)</label>` : ''}`;
-    const fd = await modal('Editar chico', cuerpo, 'Guardar cambios'); if(!fd) return;
+    const frs = S.eventos.filter(e => esSemanal(e) && e.porFrecuencia && aplica(e, x.curso)).sort(porNombre);
+    const OPC = [[1,'Cada semana'],[2,'Cada dos semanas'],[4,'Una vez al mes'],[0,'No le toca']];
+    const cuerpoF = frs.length ? `<p>Cada cuánto le toca:</p>${frs.map(e => { const v = (x.cada || {})[e.id] ?? 1; return `<label>${esc(e.nombre)}<select name="cada_${e.id}">${OPC.map(([n,t]) => `<option value="${n}" ${v === n ? 'selected' : ''}>${t}</option>`).join('')}</select></label>`; }).join('')}` : '';
+    const fd = await modal('Editar chico', cuerpo + cuerpoF, 'Guardar cambios'); if(!fd) return;
     const datos = {nombre:String(fd.get('nombre')).trim() || x.nombre};
+    if(frs.length){ datos.cada = {...(x.cada || {})}; frs.forEach(e => datos.cada[e.id] = +fd.get('cada_' + e.id)); }
     if(esAdmin()){ datos.curso = fd.get('curso'); if(datos.curso !== x.curso) datos.responsable = ''; if(fd.get('baja')) datos.activo = false; }
     guardar(() => DB.set('chicos', x.id, datos, true), datos.activo === false ? `${datos.nombre} dado de baja` : 'Cambios guardados');
   },
@@ -1262,7 +1342,13 @@ const CLICK = {
   ifAnadir(){ guardarFilas([...leerFilasInforme(), {id:nuevoId(), etiqueta:'Nuevo dato', medida:'suma', fuente:''}]); },
   vistaTipo(b){ S.vista = b.dataset.v; render(); },
   miMenu(){ const p = S.profile; menuModal(p.nombre, `<p class="nota" style="margin:0">${esc(rolTxt(p))}. Usuario: ${esc(p.usuario || '')}</p>
-    <button class="btn sec" data-a="miCuenta" type="button">Cambiar mi contraseña</button><button class="btn sec" data-a="sugerir" type="button">Sugerir una mejora</button><button class="btn sec" data-a="salir" type="button">Salir</button>`); },
+    <button class="btn sec" data-a="miCuenta" type="button">Cambiar mi contraseña</button><button class="btn sec" data-a="sugerir" type="button">Sugerir una mejora</button><button class="btn sec" data-a="manual" type="button">Manual de uso</button><button class="btn sec" data-a="salir" type="button">Salir</button>`); },
+  manual(){ menuModal('Manual de uso', manualHtml()); },
+  verTrim(){ S.view = 'resumen'; S.periodo = 'trim'; S.mes = mesMas(mesInicioTrim(hoyMes()), -3); render(); window.scrollTo(0,0); },
+  periodo(b){ S.periodo = b.dataset.v; if(S.periodo === 'trim') S.mes = mesInicioTrim(S.mes); render(); },
+  async borrarAviso(b){ const fd = await modal('Eliminar aviso', '<p>El aviso dejará de verse para todos.</p>', 'Eliminar', true); if(fd) guardar(() => DB.set('config', 'avisos', {items:(cfgDoc('avisos').items || []).filter(a => a.id !== b.dataset.id)}, true), 'Aviso eliminado'); },
+  async borrarRecurso(b){ const fd = await modal('Eliminar documento', '<p>El enlace dejará de verse en la app. El documento de Drive no se borra.</p>', 'Eliminar', true); if(fd) guardar(() => DB.set('config', 'recursos', {items:(cfgDoc('recursos').items || []).filter(a => a.id !== b.dataset.id)}, true), 'Documento quitado'); },
+  excelDashboard(){ excelDashboard(); },
   mas(){ const resto = tabsDisponibles().filter(t => !PRIMARIAS.includes(t.id));
     menuModal('Más opciones', resto.map(t => `<button class="btn sec" data-a="vista" data-v="${t.id}" type="button">${t.nombre}</button>`).join('') + `<button class="btn sec" data-a="sugerir" type="button">Sugerir una mejora</button><button class="btn sec" data-a="miMenu" type="button">Mi cuenta</button>`); },
   dashEditar(){ S.dashEdit = !S.dashEdit; render(); },
@@ -1323,6 +1409,16 @@ const SUBMIT = {
     const ok = await guardar(() => DB.createUser(datos), `${datos.nombre} dado de alta con el usuario ${datos.usuario}`);
     btn.disabled = false; if(ok) finForm(f);
   },
+  async nuevoAviso(f){
+    const fd = new FormData(f); const texto = String(fd.get('texto')).trim(); const cursos = fd.getAll('cursos'); if(!texto) return; if(!cursos.length){ toast('Elige al menos un curso.'); return; }
+    const a = {id:nuevoId(), texto, cursos:cursos.length === CURSOS.length ? [] : cursos, fecha:new Date().toISOString(), nombre:S.profile.nombre};
+    if(await guardar(() => DB.set('config', 'avisos', {items:[a, ...(cfgDoc('avisos').items || [])].slice(0, 40)}, true), 'Aviso enviado')){ marcarLeidos([a.id]); finForm(f); }
+  },
+  async nuevoRecurso(f){
+    const fd = new FormData(f); const titulo = String(fd.get('titulo')).trim(); const url = String(fd.get('url')).trim(); const cursos = fd.getAll('cursos');
+    if(!/^https:\/\//i.test(url)){ toast('El enlace debe empezar por https://'); return; } if(!cursos.length){ toast('Elige al menos un curso.'); return; }
+    if(await guardar(() => DB.set('config', 'recursos', {items:[...(cfgDoc('recursos').items || []), {id:nuevoId(), titulo, url, cursos:cursos.length === CURSOS.length ? [] : cursos}]}, true), 'Documento añadido')) finForm(f);
+  },
   async informe(f){ if(await guardarFilas(leerFilasInforme())) toast('Informe guardado'); if(document.activeElement) document.activeElement.blur(); render(); },
   async nuevoWidget(f){
     const fd = new FormData(f); const tipo = fd.get('tipo');
@@ -1338,7 +1434,8 @@ const SUBMIT = {
         if(v.id === '__anuales') await DB.set('config', 'dashboard', {objAnuales:n}, true);
         else if(v.id.startsWith('oc:')) await DB.set('config', 'dashboard', {objOcasionales:{...(cfgDash().objOcasionales || {}), [v.nombre]:n}}, true);
         else await DB.set('eventos', v.id, {objetivo:n}, true); }
-      for(const v of vs.filter(x => x.tipo === 'semanal')){ const a = fd.get('agr_' + v.id); if(a && a !== (v.evs[0].agregacion || 'suma')) await DB.set('eventos', v.id, {agregacion:a}, true); }
+      for(const v of vs.filter(x => x.tipo === 'semanal')){ const a = fd.get('agr_' + v.id); if(a && a !== (v.evs[0].agregacion || 'suma')) await DB.set('eventos', v.id, {agregacion:a}, true);
+        const fr = fd.get('frq_' + v.id) === '1'; if(fr !== !!v.evs[0].porFrecuencia) await DB.set('eventos', v.id, {porFrecuencia:fr}, true); }
     }, 'Objetivos guardados');
     if(document.activeElement) document.activeElement.blur(); render();
   }
