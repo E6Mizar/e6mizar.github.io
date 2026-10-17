@@ -206,6 +206,25 @@ legend{font-size:.88rem;font-weight:600;color:var(--muted);margin-bottom:.4rem}
 .modal-pie{display:flex;justify-content:flex-end;gap:.5rem;margin-top:.4rem}
 #toast{position:fixed;left:50%;bottom:calc(1.2rem + env(safe-area-inset-bottom,0px));transform:translate(-50%,150%);background:var(--ink);color:var(--surface);padding:.65rem 1rem;border-radius:10px;font-weight:600;font-size:.92rem;z-index:50;transition:transform .25s;max-width:calc(100% - 2rem)}
 #toast.ver{transform:translate(-50%,0)}
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--star-on-night);color:#1B2A4E;border:0;font-family:var(--display);font-weight:700;font-size:1.15rem;cursor:pointer;flex:none}
+.quien-txt{text-align:right}
+.abajo{display:none;position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--night);padding:.25rem .3rem calc(.3rem + env(safe-area-inset-bottom,0px));justify-content:space-around;border-top:1px solid var(--night-2)}
+.ab{flex:1;background:none;border:0;color:var(--night-muted);display:flex;flex-direction:column;align-items:center;gap:.1rem;font-size:.72rem;font-weight:600;padding:.4rem 0;cursor:pointer}
+.ab svg{width:24px;height:24px}
+.ab.on{color:var(--star-on-night)}
+.fichas{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
+.ficha{border:1px solid var(--line);border-radius:12px;padding:.7rem}
+.ficha-cab{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;margin-bottom:.55rem}
+.ficha-cab small{color:var(--muted);font-size:.82rem}
+.ficha-chips{display:flex;flex-wrap:wrap;gap:.4rem}
+.chip-m{border:1.5px dashed var(--line);background:transparent;border-radius:999px;padding:.45rem .85rem;font-weight:600;font-size:.92rem;cursor:pointer;min-height:42px}
+.chip-m.si{background:var(--ok-bg);color:var(--ok);border:1.5px solid var(--ok)}
+.chip-m small{color:var(--muted);font-weight:400}
+.chip-dato{padding:.45rem .85rem;border-radius:999px;background:var(--surface-2);font-size:.92rem;min-height:42px;display:inline-flex;align-items:center;gap:.3rem}
+.menu-lista{display:flex;flex-direction:column;gap:.5rem}
+.menu-lista .btn{width:100%;text-align:left}
+@media (max-width:760px){ .tabs{display:none} .abajo{display:flex} .main{padding-bottom:calc(6rem + env(safe-area-inset-bottom,0px))} #toast{bottom:calc(5.2rem + env(safe-area-inset-bottom,0px))} .quien-txt{display:none} }
+
 .yo{background:none;border:0;color:inherit;text-align:right;cursor:pointer;padding:.2rem .3rem;border-radius:8px}
 .yo:hover{background:var(--night-2)}
 .tab.sugerir{margin-left:auto;color:var(--star-on-night)}
@@ -276,8 +295,8 @@ const hoyMes = () => { const d = new Date(); return d.getFullYear() + '-' + pad(
 const hoyISO = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); };
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 const mesLargo = m => { const [y,mm] = m.split('-'); return MESES[+mm-1] + ' de ' + y; };
-const fechaCorta = f => { const [,m,d] = f.split('-'); return (+d) + '/' + (+m); };
-const fechaLarga = f => { const [y,m,d] = f.split('-'); return (+d) + ' de ' + MESES[+m-1] + ' de ' + y; };
+const fechaCorta = f => { const [,m,d] = f.split('-'); return d ? (+d) + '/' + (+m) : MESES[+m-1].slice(0,3); };
+const fechaLarga = f => { const [y,m,d] = f.split('-'); return (d ? (+d) + ' de ' : '') + MESES[+m-1] + ' de ' + y; };
 const mesMas = (m,dl) => { let [y,mm] = m.split('-').map(Number); mm += dl; while(mm>12){mm-=12;y++} while(mm<1){mm+=12;y--} return y + '-' + pad(mm); };
 const cursoEscolarDe = m => { const [y,mm] = m.split('-').map(Number); return mm >= 9 ? y : y-1; };
 const cursoEscolarActual = () => cursoEscolarDe(hoyMes());
@@ -313,6 +332,7 @@ function modal(titulo, cuerpo, okTxt = 'Guardar', peligro = false){
     const f = d.querySelector('form');
     d.addEventListener('close', () => { const fd = d.returnValue === 'ok' ? new FormData(f) : null; d.remove(); res(fd); });
     d.showModal();
+    if(f.querySelector('[data-tipos]')) ajustarCampos(f);
   });
 }
 
@@ -416,6 +436,7 @@ async function crearFirebase(){
   const [AP, A, F] = await Promise.all([import(B+'firebase-app.js'), import(B+'firebase-auth.js'), import(B+'firebase-firestore.js')]);
   const app = AP.initializeApp(FIREBASE_CONFIG);
   const auth = A.getAuth(app); const db = F.getFirestore(app);
+  try{ await A.setPersistence(auth, A.browserSessionPersistence); }catch(e){}
   let secundaria = null;
   return {
     demo:false,
@@ -454,15 +475,25 @@ async function crearFirebase(){
 /* ============================== Estado ============================== */
 let DB;
 const S = {user:null, profile:null, usuarios:[], chicos:[], eventos:[], registros:[], config:[], reg:{}, unsubs:[],
-  view:'seguimiento', mes:hoyMes(), curso:'todos', filtro:'mios', filtroResp:'todos', anio:cursoEscolarActual(), dashAccion:null, modo:'semana', semana:lunesDe(hoyISO()), sugerencias:[], graficos:[], dashEdit:false, infNombres:false, arrancando:false, pend:false, charts:[]};
+  view:'seguimiento', mes:hoyMes(), curso:'todos', filtro:'mios', filtroResp:'todos', anio:cursoEscolarActual(), dashAccion:null, modo:'semana', semana:lunesDe(hoyISO()), sugerencias:[], graficos:[], dashEdit:false, vista:(window.innerWidth < 760) ? 'fichas' : 'tabla', infNombres:false, arrancando:false, pend:false, charts:[]};
 
 const esAdmin = () => !!S.profile && (S.profile.rol === 'admin' || S.profile.rol === 'superadmin');
 const esPrincipal = () => !!S.profile && S.profile.rol === 'superadmin';
-const TIPOS = {semanal:'Semanal (se marca cada semana)', mensual:'Mensual (se marca una vez al mes)', anual:'Anual (una vez en el curso, en una fecha)'};
-const tipoDe = e => e.tipo === 'semanal' ? 'semanal' : e.tipo === 'mensual' ? 'mensual' : 'anual';
+const TIPOS = {semanal:'Semanal (se marca cada semana)', mensual:'Mensual (una vez al mes)', trimestral:'Trimestral (una vez por trimestre)', ocasional:'Ocasional (en una fecha; por ejemplo, convivencias)', anual:'Anual (una vez por curso; fecha opcional)'};
+const tipoDe = e => ['semanal','mensual','trimestral','ocasional'].includes(e.tipo) ? e.tipo : 'anual';
 const esMensual = e => e.tipo === 'mensual';
 const esAnual = e => tipoDe(e) === 'anual';
-const activaMes = (e, m) => esMensual(e) && (!e.desde || e.desde.slice(0,7) <= m) && (!e.hasta || e.hasta.slice(0,7) >= m);
+const enRango = (e, m) => (!e.desde || e.desde.slice(0,7) <= m) && (!e.hasta || e.hasta.slice(0,7) >= m);
+const activaMes = (e, m) => esMensual(e) && enRango(e, m);
+const esTrimestral = e => e.tipo === 'trimestral';
+const esOcasional = e => e.tipo === 'ocasional';
+const mesInicioTrim = m => { const [y,mm] = m.split('-').map(Number); return y + '-' + pad(Math.floor((mm-1)/3)*3+1); };
+const mesesTrim = m => { const i = mesInicioTrim(m); return [i, mesMas(i,1), mesMas(i,2)]; };
+const textoTrim = m => { const ms = mesesTrim(m); return MESES[+ms[0].slice(5)-1].slice(0,3) + '-' + MESES[+ms[2].slice(5)-1].slice(0,3); };
+const activaTrim = (e, m) => esTrimestral(e) && mesesTrim(m).some(x => enRango(e, x));
+const anualSinFecha = e => tipoDe(e) === 'anual' && !e.fecha;
+const conFecha = e => (tipoDe(e) === 'anual' || esOcasional(e)) && !!e.fecha;
+const mesAnualSF = m => cursoEscolarDe(m) + '-09';
 const porOrden = (a,b) => (a.orden ?? 1e15) - (b.orden ?? 1e15) || (a.nombre||'').localeCompare(b.nombre||'', 'es');
 // actividades mensuales que afectan a alguno de esos cursos y están activas en alguno de esos meses
 const acciones = (cursos = CURSOS.map(c => c.id), meses = null) => S.eventos.filter(e => esMensual(e) && cursos.some(c => aplica(e, c)) && (!meses || meses.some(m => activaMes(e, m)))).sort(porOrden);
@@ -470,11 +501,11 @@ function cuentaMensual(e, chicos, m){ if(!activaMes(e, m)) return {si:0, no:0, v
 const cursosSel = () => esAdmin() ? (S.curso === 'todos' ? CURSOS.map(c => c.id) : [S.curso]) : [S.profile.curso];
 const porNombre = (a,b) => (a.nombre||'').localeCompare(b.nombre||'', 'es');
 const chicosDe = c => S.chicos.filter(x => x.curso === c && x.activo !== false).sort(porNombre);
-const responsablesDe = c => S.usuarios.filter(u => u.rol === 'responsable' && u.curso === c && u.activo !== false).sort(porNombre);
+const responsablesDe = c => S.usuarios.filter(u => ((u.rol === 'responsable' && u.curso === c) || u.rol === 'superadmin') && u.activo !== false).sort(porNombre);
 const nombreUsuario = id => (S.usuarios.find(u => u.id === id) || {}).nombre || '';
 const aplica = (ev, c) => !ev.cursos || !ev.cursos.length || ev.cursos.includes(c);
 const esSemanal = e => e.tipo === 'semanal';
-const eventosMes = (c, m) => S.eventos.filter(e => esAnual(e) && e.fecha && e.fecha.slice(0,7) === m && aplica(e,c)).sort((a,b) => a.fecha.localeCompare(b.fecha));
+const eventosMes = (c, m) => S.eventos.filter(e => conFecha(e) && e.fecha.slice(0,7) === m && aplica(e,c)).sort((a,b) => a.fecha.localeCompare(b.fecha));
 const activa = (e, l) => esSemanal(e) && (!e.desde || e.desde <= addD(l,6)) && (!e.hasta || e.hasta >= l);
 const semanalesMes = (c, m) => S.eventos.filter(e => aplica(e,c) && semanasMes(m).some(l => activa(e,l))).sort(porNombre);
 const semanasComputables = (e, m) => semanasMes(m).filter(l => l <= hoyISO() && activa(e, l));
@@ -501,14 +532,14 @@ const valor = (chico, m, key) => (S.reg[chico+'_'+m] || {})[key] === 'si' ? 'si'
 const txtValor = v => v === 'si' ? 'Sí' : v === 'no' ? 'No' : '';
 function cuenta(chicos, m, key){ let si = 0, no = 0; for(const c of chicos){ const v = valor(c.id, m, key); if(v === 'si') si++; else if(v === 'no') no++; } return {si, no, vacio:chicos.length-si-no, total:chicos.length}; }
 function asistenciaMedia(chicos, evs, m){ let si = 0, tot = 0; evs.forEach(e => { const r = cuenta(chicos, m, 'e_'+e.id); si += r.si; tot += r.total; }); return pct(si, tot); }
-function nombreResp(x){ const r = S.usuarios.find(u => u.id === x.responsable && u.activo !== false && u.rol === 'responsable' && u.curso === x.curso); return r ? r.nombre : 'Sin responsable'; }
+function nombreResp(x){ const r = S.usuarios.find(u => u.id === x.responsable && u.activo !== false && (u.rol === 'superadmin' || (u.rol === 'responsable' && u.curso === x.curso))); return r ? r.nombre : 'Sin preceptor'; }
 function grupos(c){
   const ch = chicosDe(c); const rs = responsablesDe(c); const ids = new Set(rs.map(r => r.id));
-  const g = rs.map(r => ({nombre:r.nombre, chicos:ch.filter(x => x.responsable === r.id)}));
-  const sin = ch.filter(x => !ids.has(x.responsable)); if(sin.length) g.push({nombre:'Sin responsable', chicos:sin});
+  const g = rs.map(r => ({nombre:r.nombre, chicos:ch.filter(x => x.responsable === r.id)})).filter((g,i) => g.chicos.length || rs[i].rol !== 'superadmin');
+  const sin = ch.filter(x => !ids.has(x.responsable)); if(sin.length) g.push({nombre:'Sin preceptor', chicos:sin});
   return g;
 }
-const rolTxt = p => p.rol === 'superadmin' ? 'Administrador principal' : p.rol === 'admin' ? 'Administrador' : 'Responsable de ' + cursoNombre(p.curso);
+const rolTxt = p => p.rol === 'superadmin' ? 'Administrador principal' : p.rol === 'admin' ? 'Administrador' : 'Preceptor de ' + cursoNombre(p.curso);
 const vacio = t => `<div class="vacio">${t}</div>`;
 const barraMini = (p, cls='') => `<span class="mini ${cls}"><span style="width:${p||0}%"></span></span>`;
 
@@ -539,6 +570,7 @@ function iniciarEscuchas(){
   const on = col => docs => {
     S[col] = docs;
     if(col === 'registros'){ S.reg = {}; docs.forEach(r => { S.reg[r.id] = r.marcas || {}; }); }
+    if(col === 'sugerencias') docs.filter(x => x.estado === 'vista' && x.resuelta && Date.now() - Date.parse(x.resuelta) > 15 * 864e5).forEach(x => DB.del('sugerencias', x.id).catch(() => {}));
     if(col === 'usuarios' && revisarPerfil()) return;
     listo[col] = true; if(need.every(k => listo[k])) render();
   };
@@ -579,7 +611,7 @@ function renderLogin(msg = ''){
     DB.demoUsuarios().sort((a,b) => orden[a.rol] - orden[b.rol] || (a.curso||'').localeCompare(b.curso||''))
       .map(u => `<button type="button" data-a="demoEntrar" data-usuario="${esc(u.usuario)}">${esc(u.nombre)}, ${esc(u.rol==='responsable' ? cortoCurso(u.curso) : rolTxt(u).toLowerCase())}</button>`).join('')}</div></div>` : '';
   document.getElementById('app').innerHTML = `<div class="login"><div class="login-caja">${LOGO}<h1>E6 Mizar</h1>
-    <p class="sub">Seguimiento de los chicos de 3.º ESO a 2.º Bachillerato</p>
+    <p class="sub">App del preceptor</p>
     <form class="login-form" data-f="login">
       <label>Usuario<input name="usuario" required autocapitalize="none" autocomplete="username"></label>
       <label>Contraseña<input type="password" name="pass" required autocomplete="current-password"></label>
@@ -594,7 +626,7 @@ function renderSinAcceso(t){
 
 /* ============================ Render principal ============================ */
 function tabsDisponibles(){
-  const t = [{id:'seguimiento',nombre:'Seguimiento'},{id:'chicos',nombre:'Chicos'},{id:'resumen',nombre:'Resumen del mes'},{id:'dashboard',nombre:'Dashboard'}];
+  const t = [{id:'seguimiento',nombre:'Acompañamiento',corto:'Acompañar'},{id:'chicos',nombre:'Chicos'},{id:'resumen',nombre:'Resumen del mes',corto:'Resumen'},{id:'dashboard',nombre:'Dashboard'}];
   if(esAdmin()) t.push({id:'eventos',nombre:'Actividades'},{id:'usuarios',nombre:'Usuarios'});
   if(esPrincipal()){ const n = S.sugerencias.filter(s => s.estado !== 'vista').length; t.push({id:'mejoras',nombre:'Mejoras' + (n ? ` (${n})` : '')}); }
   return t;
@@ -615,14 +647,22 @@ function render(){
   window.scrollTo(0, y);
   if(S.view === 'dashboard') dibujarGraficos();
 }
+const ICONOS = {seguimiento:'<path d="M4 6h16M4 12h16M4 18h10"/>', chicos:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5a3 3 0 0 1 0 6M21 20c0-2.6-1.7-4.8-4-5.6"/>', resumen:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>', dashboard:'<path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/>', mas:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'};
+const ico = k => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONOS[k]}</svg>`;
+const PRIMARIAS = ['seguimiento','chicos','resumen','dashboard'];
 function cabecera(tabs){
-  const p = S.profile;
+  const p = S.profile; const resto = tabs.filter(t => !PRIMARIAS.includes(t.id));
   return `${DB.demo ? `<div class="aviso-demo">Modo demostración: datos ficticios guardados solo en este navegador. <button class="enlace" data-a="resetDemo">Restablecer datos</button></div>` : ''}
   <header class="cab"><div class="cab-fila"><div class="marca">${LOGO}<span>E6 Mizar</span></div>
-  <div class="quien"><button class="yo" data-a="miCuenta" title="Cambiar mi contraseña"><strong>${esc(p.nombre)}</strong><small>${esc(rolTxt(p))}</small></button><button class="btn fantasma peq" data-a="salir">Salir</button></div></div>
-  <nav class="tabs" aria-label="Secciones">${tabs.map(t => `<button class="tab ${S.view===t.id?'on':''}" data-a="vista" data-v="${t.id}" ${S.view===t.id?'aria-current="page"':''}>${t.nombre}</button>`).join('')}<button class="tab sugerir" data-a="sugerir">Sugerir mejora</button></nav></header>`;
+  <div class="quien"><div class="quien-txt"><strong>${esc(p.nombre)}</strong><small>${esc(rolTxt(p))}</small></div><button class="avatar" data-a="miMenu" aria-label="Mi cuenta">${esc((p.nombre || '?').trim().charAt(0).toUpperCase())}</button></div></div>
+  <nav class="tabs" aria-label="Secciones" data-scroll="tabs">${tabs.map(t => `<button class="tab ${S.view===t.id?'on':''}" data-a="vista" data-v="${t.id}" ${S.view===t.id?'aria-current="page"':''}>${t.nombre}</button>`).join('')}<button class="tab sugerir" data-a="sugerir">Sugerir mejora</button></nav></header>
+  <nav class="abajo" aria-label="Secciones">${tabs.filter(t => PRIMARIAS.includes(t.id)).map(t => `<button class="ab ${S.view===t.id?'on':''}" data-a="vista" data-v="${t.id}" ${S.view===t.id?'aria-current="page"':''}>${ico(t.id)}<span>${t.corto || t.nombre}</span></button>`).join('')}<button class="ab ${resto.some(t => t.id === S.view)?'on':''}" data-a="mas">${ico('mas')}<span>Más</span></button></nav>`;
 }
-function ctrlMes(){ return `<div class="mesnav"><button class="icono" data-a="mes" data-d="-1" aria-label="Mes anterior">‹</button><span class="mes-label">${cap(mesLargo(S.mes))}</span><button class="icono" data-a="mes" data-d="1" aria-label="Mes siguiente">›</button></div>`; }
+function menuModal(titulo, cuerpo){
+  const d = document.createElement('dialog'); d.className = 'modal';
+  d.innerHTML = `<form method="dialog"><h3>${esc(titulo)}</h3><div class="menu-lista">${cuerpo}</div><div class="modal-pie"><button class="btn sec" value="cancel">Cerrar</button></div></form>`;
+  document.body.appendChild(d); d.addEventListener('close', () => d.remove()); d.showModal();
+}function ctrlMes(){ return `<div class="mesnav"><button class="icono" data-a="mes" data-d="-1" aria-label="Mes anterior">‹</button><span class="mes-label">${cap(mesLargo(S.mes))}</span><button class="icono" data-a="mes" data-d="1" aria-label="Mes siguiente">›</button></div>`; }
 function ctrlCurso(){
   if(!esAdmin()) return `<span class="chip fijo" style="--cc:${colorCurso(S.profile.curso)}">${cursoNombre(S.profile.curso)}</span>`;
   const ops = [{id:'todos', corto:'Todos', v:'--night-2'}, ...CURSOS];
@@ -631,22 +671,25 @@ function ctrlCurso(){
 function cabBloque(c, extra = ''){ return `<div class="bloque-cab"><span class="punto" style="--cc:${colorCurso(c)}"></span><h2>${cursoNombre(c)}</h2>${extra}</div>`; }
 
 /* ============================ Seguimiento ============================ */
-const GRUPO_TXT = {accion:'Actividades mensuales', evento:'Actividades anuales', semanal:'Actividades semanales', agregado:'Semanales: cómputo del mes'};
+const GRUPO_TXT = {accion:'Mensuales', trim:'Trimestrales', semanal:'Semanales', agregado:'Semanales: cómputo del mes', ocasional:'Ocasionales', evento:'Anuales', anualsf:'Anuales del curso'};
 function columnasSemana(c, l){
   const fin = addD(l, 6);
   return [
     ...S.eventos.filter(e => activa(e, l) && aplica(e, c)).sort(porNombre).map(e => ({key:`s_${e.id}_${l}`, nombre:e.nombre, tipo:'semanal', mes:mesDeSemana(l)})),
-    ...S.eventos.filter(e => esAnual(e) && e.fecha && e.fecha >= l && e.fecha <= fin && aplica(e, c)).sort((a,b) => a.fecha.localeCompare(b.fecha)).map(e => ({key:'e_'+e.id, nombre:e.nombre, fecha:e.fecha, tipo:'evento', mes:e.fecha.slice(0,7)}))
+    ...S.eventos.filter(e => conFecha(e) && e.fecha.length === 10 && e.fecha >= l && e.fecha <= fin && aplica(e, c)).sort((a,b) => a.fecha.localeCompare(b.fecha)).map(e => ({key:'e_'+e.id, nombre:e.nombre, fecha:e.fecha, tipo:esOcasional(e) ? 'ocasional' : 'evento', mes:e.fecha.slice(0,7)}))
   ];
 }
 function columnasMes(c, m){
+  const fe = eventosMes(c, m);
   return [
     ...acciones([c], [m]).map(a => ({key:'a_'+a.id, nombre:a.nombre, tipo:'accion', mes:m})),
-    ...eventosMes(c, m).map(e => ({key:'e_'+e.id, nombre:e.nombre, fecha:e.fecha, tipo:'evento', mes:m})),
-    ...semanalesMes(c, m).map(e => ({key:'g_'+e.id, nombre:e.nombre, tipo:'agregado', ev:e, mes:m, sub:AGREG_CORTO[e.agregacion || 'suma']}))
+    ...S.eventos.filter(e => activaTrim(e, m) && aplica(e, c)).sort(porOrden).map(e => ({key:'t_'+e.id, nombre:e.nombre, tipo:'trim', mes:mesInicioTrim(m), sub:textoTrim(m)})),
+    ...semanalesMes(c, m).map(e => ({key:'g_'+e.id, nombre:e.nombre, tipo:'agregado', ev:e, mes:m, sub:AGREG_CORTO[e.agregacion || 'suma']})),
+    ...fe.filter(esOcasional).map(e => ({key:'e_'+e.id, nombre:e.nombre, fecha:e.fecha, tipo:'ocasional', mes:m})),
+    ...fe.filter(e => !esOcasional(e)).map(e => ({key:'e_'+e.id, nombre:e.nombre, fecha:e.fecha, tipo:'evento', mes:m})),
+    ...S.eventos.filter(e => anualSinFecha(e) && aplica(e, c)).sort(porNombre).map(e => ({key:'y_'+e.id, nombre:e.nombre, tipo:'anualsf', mes:mesAnualSF(m), sub:'Este curso'}))
   ];
-}
-function ctrlSemana(){ return `<div class="mesnav"><button class="icono" data-a="semana" data-d="-1" aria-label="Semana anterior">‹</button><span class="mes-label">${textoSemana(S.semana)}</span><button class="icono" data-a="semana" data-d="1" aria-label="Semana siguiente">›</button></div>`; }
+}function ctrlSemana(){ return `<div class="mesnav"><button class="icono" data-a="semana" data-d="-1" aria-label="Semana anterior">‹</button><span class="mes-label">${textoSemana(S.semana)}</span><button class="icono" data-a="semana" data-d="1" aria-label="Semana siguiente">›</button></div>`; }
 function vistaSeguimiento(){
   const cursos = cursosSel(); let filtro;
   if(!esAdmin()){
@@ -655,18 +698,19 @@ function vistaSeguimiento(){
       <button class="${S.filtro==='curso'?'on':''}" data-a="filtro" data-v="curso" aria-pressed="${S.filtro==='curso'}">Todo el curso</button></div>`;
   } else {
     const rs = cursos.flatMap(responsablesDe);
-    filtro = `<label class="sel"><span class="vh">Responsable</span><select data-ch="filtroResp"><option value="todos">Todos los responsables</option>${
-      rs.map(r => `<option value="${r.id}" ${S.filtroResp===r.id?'selected':''}>${esc(r.nombre)} (${cortoCurso(r.curso)})</option>`).join('')}
-      <option value="sin" ${S.filtroResp==='sin'?'selected':''}>Sin responsable</option></select></label>`;
+    filtro = `<label class="sel"><span class="vh">Preceptor</span><select data-ch="filtroResp"><option value="todos">Todos los preceptores</option>${
+      rs.map(r => `<option value="${r.id}" ${S.filtroResp===r.id?'selected':''}>${esc(r.nombre)}${r.curso ? ` (${cortoCurso(r.curso)})` : ''}</option>`).join('')}
+      <option value="sin" ${S.filtroResp==='sin'?'selected':''}>Sin preceptor</option></select></label>`;
   }
   const modo = `<div class="seg" role="group" aria-label="Periodo">
     <button class="${S.modo==='semana'?'on':''}" data-a="modo" data-v="semana" aria-pressed="${S.modo==='semana'}">Semana</button>
     <button class="${S.modo==='mes'?'on':''}" data-a="modo" data-v="mes" aria-pressed="${S.modo==='mes'}">Mes</button></div>`;
   const tablas = cursos.map(c => S.modo === 'semana' ? tablaCurso(c, columnasSemana(c, S.semana), 'semana') : tablaCurso(c, columnasMes(c, S.mes), 'mes')).filter(Boolean).join('');
   const ayuda = S.modo === 'semana'
-    ? 'Marca la asistencia de esta semana. Toca una casilla para poner o quitar el ✓. Vacía significa que no asistió.'
-    : 'Toca una casilla para poner o quitar el ✓. Vacía significa que no se hizo. Las actividades semanales se marcan en la vista Semana; aquí ves su cómputo del mes.';
-  return `<div class="barra">${modo}${S.modo === 'semana' ? ctrlSemana() : ctrlMes()}${ctrlCurso()}${filtro}</div>
+    ? 'Marca la asistencia de esta semana. Toca para poner o quitar el ✓. Sin ✓ significa que no asistió.'
+    : 'Toca para poner o quitar el ✓. Sin ✓ significa que no se hizo. Las semanales se marcan en la vista Semana; aquí ves su cómputo del mes.';
+  const vistaSel = `<div class="seg" role="group" aria-label="Presentación"><button class="${S.vista==='fichas'?'on':''}" data-a="vistaTipo" data-v="fichas" aria-pressed="${S.vista==='fichas'}">Fichas</button><button class="${S.vista==='tabla'?'on':''}" data-a="vistaTipo" data-v="tabla" aria-pressed="${S.vista==='tabla'}">Tabla</button></div>`;
+  return `<div class="barra">${modo}${S.modo === 'semana' ? ctrlSemana() : ctrlMes()}${ctrlCurso()}${filtro}${vistaSel}</div>
     <p class="ayuda">${ayuda}</p>${tablas || vacio('Ningún chico coincide con este filtro.')}`;
 }
 function tablaCurso(c, cols, modo){
@@ -680,6 +724,7 @@ function tablaCurso(c, cols, modo){
   const cab = cabBloque(c, `<span class="meta">${ch.length} ${ch.length===1?'chico':'chicos'}</span>`);
   if(!ch.length) return `<section class="bloque">${cab}${vacio(!esAdmin() && S.filtro==='mios' ? 'Todavía no tienes chicos asignados. Asígnatelos en la pestaña Chicos o mira «Todo el curso».' : 'Este curso no tiene chicos. Añádelos en la pestaña Chicos.')}</section>`;
   if(!cols.length) return `<section class="bloque">${cab}${vacio(modo === 'semana' ? `No hay actividades esta semana para ${cursoNombre(c)}.` : 'No hay columnas este mes.')}</section>`;
+  if(S.vista === 'fichas') return `<section class="bloque">${cab}${fichasCurso(ch, cols, ids)}</section>`;
   const gr = []; cols.forEach((col,i) => { if(!gr.length || gr[gr.length-1].tipo !== col.tipo){ gr.push({tipo:col.tipo, n:0}); col.ini = i > 0; } gr[gr.length-1].n++; });
   const th = col => `<th scope="col" class="col ${col.tipo} ${col.ini?'ini':''}"><span class="col-nom">${esc(col.nombre)}</span>${col.fecha ? `<span class="col-fecha">${fechaCorta(col.fecha)}</span>` : col.sub ? `<span class="col-fecha">${esc(col.sub)}</span>` : ''}</th>`;
   const celda = (x, col) => {
@@ -688,7 +733,7 @@ function tablaCurso(c, cols, modo){
     const v = valor(x.id, col.mes, col.key); const est = v==='si' ? 'hecho' : 'no hecho';
     return `<td${ini}><button class="celda ${v}" data-a="marcar" data-chico="${x.id}" data-key="${col.key}" data-mes="${col.mes}" data-foco="${x.id}|${col.key}" aria-label="${esc(x.nombre)}, ${esc(col.nombre)}: ${est}">${v==='si'?'✓':''}</button></td>`;
   };
-  const filas = ch.map(x => `<tr><th scope="row" class="nom"><span>${esc(x.nombre)}</span><small>${esc(ids.has(x.responsable) ? nombreUsuario(x.responsable) : 'Sin responsable')}</small></th>${cols.map(col => celda(x,col)).join('')}</tr>`).join('');
+  const filas = ch.map(x => `<tr><th scope="row" class="nom"><span>${esc(x.nombre)}</span><small>${esc(ids.has(x.responsable) ? nombreUsuario(x.responsable) : 'Sin preceptor')}</small></th>${cols.map(col => celda(x,col)).join('')}</tr>`).join('');
   const pie = `<tr><th scope="row" class="nom">Total</th>${cols.map(col => {
     const ini = col.ini ? ' class="ini"' : '';
     if(col.tipo === 'agregado') return `<td${ini}>${agregadoCurso(ch, col.ev, col.mes).txt}</td>`;
@@ -698,22 +743,28 @@ function tablaCurso(c, cols, modo){
     <tr>${cols.map(th).join('')}</tr></thead><tbody>${filas}</tbody><tfoot>${pie}</tfoot></table></div></section>`;
 }
 
+function fichasCurso(ch, cols, ids){
+  return `<ul class="fichas">${ch.map(x => `<li class="ficha"><div class="ficha-cab"><b>${esc(x.nombre)}</b><small>${esc(ids.has(x.responsable) ? nombreUsuario(x.responsable) : 'Sin preceptor')}</small></div><div class="ficha-chips">${cols.map(col => {
+    if(col.tipo === 'agregado'){ const r = agregado(x.id, col.ev, col.mes); return `<span class="chip-dato">${esc(col.nombre)}: <b>${r.txt}</b></span>`; }
+    const v = valor(x.id, col.mes, col.key);
+    return `<button class="chip-m ${v}" data-a="marcar" data-chico="${x.id}" data-key="${col.key}" data-mes="${col.mes}" data-foco="${x.id}|${col.key}" aria-pressed="${v==='si'}">${v==='si' ? '✓ ' : ''}${esc(col.nombre)}${col.fecha ? ` <small>${fechaCorta(col.fecha)}</small>` : ''}</button>`; }).join('')}</div></li>`).join('')}</ul>`;
+}
 /* ============================ Chicos ============================ */
-function opcionesResp(c, sel){ return `<option value="">Sin responsable</option>` + responsablesDe(c).map(r => `<option value="${r.id}" ${r.id===sel?'selected':''}>${esc(r.nombre)}</option>`).join(''); }
+function opcionesResp(c, sel){ return `<option value="">Sin preceptor</option>` + responsablesDe(c).map(r => `<option value="${r.id}" ${r.id===sel?'selected':''}>${esc(r.nombre)}</option>`).join(''); }
 function vistaChicos(){
   const cursoForm = esAdmin() ? (S.curso !== 'todos' ? S.curso : CURSOS[0].id) : S.profile.curso;
   const form = `<form class="panel" data-f="nuevoChico"><h3>Añadir chico</h3><div class="campos">
     <label>Nombre<input name="nombre" required maxlength="60" autocomplete="off" placeholder="Nombre e inicial del apellido"></label>
     ${esAdmin() ? `<label>Curso<select name="curso" id="nc-curso">${CURSOS.map(c => `<option value="${c.id}" ${c.id===cursoForm?'selected':''}>${c.nombre}</option>`).join('')}</select></label>` : ''}
-    <label>Responsable<select name="responsable" id="nc-resp">${opcionesResp(cursoForm, esAdmin() ? '' : S.profile.id)}</select></label>
+    <label>Preceptor<select name="responsable" id="nc-resp">${opcionesResp(cursoForm, esAdmin() ? '' : S.profile.id)}</select></label>
     <button class="btn" type="submit">Añadir chico</button></div></form>`;
   const lista = c => {
     const ch = chicosDe(c); const rs = responsablesDe(c); const bajas = S.chicos.filter(x => x.curso === c && x.activo === false).sort(porNombre);
     const reparto = rs.map(r => `${esc(r.nombre)}: ${ch.filter(x => x.responsable === r.id).length}`).join(', ');
     const items = ch.map(x => {
       const huerfano = x.responsable && !rs.some(r => r.id === x.responsable);
-      return `<li><span class="li-nom">${esc(x.nombre)}${huerfano ? '<small>Su responsable ya no está en este curso</small>' : ''}</span>
-        <label class="sel"><span class="vh">Responsable de ${esc(x.nombre)}</span><select data-ch="resp" data-id="${x.id}">${opcionesResp(c, huerfano ? '' : x.responsable)}</select></label>
+      return `<li><span class="li-nom">${esc(x.nombre)}${huerfano ? '<small>Su preceptor ya no está en este curso</small>' : ''}</span>
+        <label class="sel"><span class="vh">Preceptor de ${esc(x.nombre)}</span><select data-ch="resp" data-id="${x.id}">${opcionesResp(c, huerfano ? '' : x.responsable)}</select></label>
         <button class="btn sec peq" data-a="editarChico" data-id="${x.id}">Editar</button></li>`; }).join('');
     return `<section class="bloque">${cabBloque(c, `<span class="meta">${ch.length} chicos${reparto ? '. ' + reparto : ''}</span>`)}
       ${ch.length ? `<ul class="lista">${items}</ul>` : vacio('Sin chicos todavía. Añade el primero con el formulario de arriba.')}
@@ -721,7 +772,7 @@ function vistaChicos(){
     </section>`;
   };
   return `<div class="barra">${ctrlCurso()}</div>${form}
-    <p class="ayuda">Para pasar un chico a otro responsable, cámbialo en su desplegable. El cambio es inmediato para todos.</p>
+    <p class="ayuda">Para pasar un chico a otro preceptor, cámbialo en su desplegable. El cambio es inmediato para todos.</p>
     ${cursosSel().map(lista).join('')}`;
 }
 
@@ -736,9 +787,9 @@ function resumenGlobal(cursos){
   const acc = acciones(cursos, [S.mes]); let tCh = [];
   const filas = cursos.map(c => { const ch = chicosDe(c); tCh = tCh.concat(ch);
     const ps = semanalTotales(ch, [c], S.mes);
-    return `<tr><td>${cursoNombre(c)}</td><td class="n">${ch.length}</td>${acc.map(a => { const r = cuentaMensual(a, ch, S.mes); const p = pct(r.si, r.total); return `<td class="n">${pctTxt(p)}${barraMini(p)}</td>`; }).join('')}<td class="n">${pctTxt(asistenciaMedia(ch, eventosMes(c,S.mes), S.mes))}</td><td class="n">${pctTxt(ps)}${barraMini(ps)}</td></tr>`; }).join('');
+    return `<tr><td>${cursoNombre(c)}</td><td class="n">${ch.length}</td>${acc.map(a => { const r = cuentaMensual(a, ch, S.mes); const p = pct(r.si, r.total); return `<td class="n">${r.total ? `${r.si}/${r.total} (${pctTxt(p)})` : '—'}</td>`; }).join('')}<td class="n">${pctTxt(asistenciaMedia(ch, eventosMes(c,S.mes), S.mes))}</td><td class="n">${pctTxt(ps)}${barraMini(ps)}</td></tr>`; }).join('');
   let siE = 0, totE = 0; cursos.forEach(c => eventosMes(c, S.mes).forEach(e => { const r = cuenta(chicosDe(c), S.mes, 'e_'+e.id); siE += r.si; totE += r.total; }));
-  const tot = `<tr><th>Total</th><td class="n"><b>${tCh.length}</b></td>${acc.map(a => { const r = cuentaMensual(a, tCh, S.mes); return `<td class="n"><b>${pctTxt(pct(r.si,r.total))}</b></td>`; }).join('')}<td class="n"><b>${pctTxt(pct(siE,totE))}</b></td><td class="n"><b>${pctTxt(semanalTotales(tCh, cursos, S.mes))}</b></td></tr>`;
+  const tot = `<tr><th>Total</th><td class="n"><b>${tCh.length}</b></td>${acc.map(a => { const r = cuentaMensual(a, tCh, S.mes); return `<td class="n"><b>${r.si}/${r.total} (${pctTxt(pct(r.si,r.total))})</b></td>`; }).join('')}<td class="n"><b>${pctTxt(pct(siE,totE))}</b></td><td class="n"><b>${pctTxt(semanalTotales(tCh, cursos, S.mes))}</b></td></tr>`;
   return `<section class="bloque"><div class="bloque-cab"><h2>Todos los cursos</h2><span class="meta">${cap(mesLargo(S.mes))}</span></div><div class="envoltura"><table class="datos">
     <thead><tr><th>Curso</th><th>Chicos</th>${acc.map(a => `<th>${esc(a.nombre)}</th>`).join('')}<th>Actividades anuales</th><th>Asistencia semanal</th></tr></thead><tbody>${filas}${tot}</tbody></table></div>
     <p class="nota">Asistencia semanal: porcentaje de semanas asistidas sobre el total de semanas transcurridas, sumando todas las actividades semanales.</p></section>`;
@@ -746,19 +797,19 @@ function resumenGlobal(cursos){
 function resumenCurso(c){
   const ch = chicosDe(c); const acc = acciones([c], [S.mes]); const evs = eventosMes(c, S.mes); const sems = semanalesMes(c, S.mes);
   if(!ch.length) return `<section class="bloque">${cabBloque(c)}${vacio('Este curso no tiene chicos.')}</section>`;
-  const filasCol = columnasMes(c, S.mes).filter(k => k.tipo !== 'agregado').map(col => { const r = cuenta(ch, S.mes, col.key); const p = pct(r.si, r.total);
+  const filasCol = columnasMes(c, S.mes).filter(k => k.tipo !== 'agregado').map(col => { const r = cuenta(ch, col.mes, col.key); const p = pct(r.si, r.total);
     return `<tr><td>${esc(col.nombre)}${col.fecha ? ` <span class="meta">(${fechaCorta(col.fecha)})</span>` : ''}</td><td class="n">${r.si}</td><td class="n">${r.total - r.si}</td><td class="n">${pctTxt(p)}${barraMini(p)}</td></tr>`; }).join('');
   const filasSem = sems.map(e => { const r = agregadoCurso(ch, e, S.mes);
-    return `<tr><td>${esc(e.nombre)}</td><td>${AGREG[e.agregacion || 'suma']}</td><td class="n">${semanasComputables(e, S.mes).length}</td><td>${esc(r.largo || r.txt)}${r.p !== null ? barraMini(r.p) : ''}</td></tr>`; }).join('');
+    return `<tr><td>${esc(e.nombre)}</td><td class="n">${semanasComputables(e, S.mes).length}</td><td>${esc(r.largo || r.txt)}${r.p !== null ? barraMini(r.p) : ''}</td></tr>`; }).join('');
   const gs = grupos(c);
   const filasResp = gs.map(g => `<tr><td>${esc(g.nombre)}</td><td class="n">${g.chicos.length}</td>${acc.map(a => { const r = cuentaMensual(a, g.chicos, S.mes); return `<td class="n">${r.si}/${r.total}</td>`; }).join('')}<td class="n">${pctTxt(asistenciaMedia(g.chicos, evs, S.mes))}</td>${sems.map(e => `<td class="n">${agregadoCurso(g.chicos, e, S.mes).txt}</td>`).join('')}</tr>`).join('');
   const a0 = acc.find(a => a.id === 'tutoria') || acc.find(a => /tutor/i.test(a.nombre)) || acc[0];
   const pend = a0 ? ch.filter(x => valor(x.id, S.mes, 'a_'+a0.id) !== 'si') : [];
   return `<section class="bloque">${cabBloque(c, `<span class="meta">${ch.length} chicos</span>`)}
     <div class="envoltura"><table class="datos"><thead><tr><th>Actividad</th><th>Sí</th><th>No</th><th>Porcentaje</th></tr></thead><tbody>${filasCol}</tbody></table></div>
-    ${sems.length ? `<h3 style="font-size:1rem;margin:1.1rem 0 .4rem">Actividades semanales</h3><div class="envoltura"><table class="datos"><thead><tr><th>Actividad</th><th>Cómputo</th><th>Semanas</th><th>Resultado del curso</th></tr></thead><tbody>${filasSem}</tbody></table></div>` : ''}
-    <h3 style="font-size:1rem;margin:1.1rem 0 .4rem">Por responsable</h3>
-    <div class="envoltura"><table class="datos"><thead><tr><th>Responsable</th><th>Chicos</th>${acc.map(a => `<th>${esc(a.nombre)}</th>`).join('')}<th>Actividades anuales</th>${sems.map(e => `<th>${esc(e.nombre)}</th>`).join('')}</tr></thead><tbody>${filasResp}</tbody></table></div>
+    ${sems.length ? `<h3 style="font-size:1rem;margin:1.1rem 0 .4rem">Actividades semanales</h3><div class="envoltura"><table class="datos"><thead><tr><th>Actividad</th><th>Semanas</th><th>Resultado del curso</th></tr></thead><tbody>${filasSem}</tbody></table></div>` : ''}
+    <h3 style="font-size:1rem;margin:1.1rem 0 .4rem">Por preceptor</h3>
+    <div class="envoltura"><table class="datos"><thead><tr><th>Preceptor</th><th>Chicos</th>${acc.map(a => `<th>${esc(a.nombre)}</th>`).join('')}<th>Actividades anuales</th>${sems.map(e => `<th>${esc(e.nombre)}</th>`).join('')}</tr></thead><tbody>${filasResp}</tbody></table></div>
     ${a0 && pend.length ? `<div class="pendientes"><b>Sin ${esc(a0.nombre.toLowerCase())} marcada este mes (${pend.length}):</b> ${pend.map(x => esc(x.nombre)).join(', ')}</div>` : ''}
   </section>`;
 }
@@ -770,7 +821,7 @@ function exportarExcel(){
     res.push([cursoNombre(c), ch.length, ...acc.map(a => { const r = cuentaMensual(a, ch, m); return pct(r.si, r.total) ?? ''; }), evs.length, asistenciaMedia(ch, evs, m) ?? '', semanalTotales(ch, [c], m) ?? '']); });
   res.push([], ['Actividades semanales'], ['Curso','Actividad','Cómputo','Semanas','Resultado']);
   cursos.forEach(c => semanalesMes(c, m).forEach(e => { const r = agregadoCurso(chicosDe(c), e, m); res.push([cursoNombre(c), e.nombre, AGREG[e.agregacion || 'suma'], semanasComputables(e, m).length, r.largo || r.txt]); }));
-  res.push([], ['Por responsable'], ['Curso','Responsable','Chicos', ...acc.map(a => a.nombre + ' (realizadas)'), 'Asistencia media a actividades anuales (%)']);
+  res.push([], ['Por preceptor'], ['Curso','Preceptor','Chicos', ...acc.map(a => a.nombre + ' (realizadas)'), 'Asistencia media a actividades anuales (%)']);
   cursos.forEach(c => grupos(c).forEach(g => res.push([cursoNombre(c), g.nombre, g.chicos.length, ...acc.map(a => cuentaMensual(a, g.chicos, m).si), asistenciaMedia(g.chicos, eventosMes(c,m), m) ?? ''])));
   res.push([], ['Actividades anuales'], ['Curso','Actividad','Fecha','Asistieron','No asistieron','Asistencia (%)']);
   cursos.forEach(c => eventosMes(c, m).forEach(e => { const r = cuenta(chicosDe(c), m, 'e_'+e.id); res.push([cursoNombre(c), e.nombre, fechaLarga(e.fecha), r.si, r.total - r.si, pct(r.si, r.total) ?? '']); }));
@@ -782,7 +833,7 @@ function exportarExcel(){
       semanasMes(m).filter(l => activa(e, l)).forEach(l => cols.push({nombre:`${e.nombre} (${semanaCorta(l)})`, key:`s_${e.id}_${l}`, mes:m}));
       cols.push({nombre:`${e.nombre}: cómputo del mes (${AGREG_CORTO[e.agregacion || 'suma'].toLowerCase()})`, agr:e});
     });
-    const aoa = [['Chico','Responsable', ...cols.map(k => k.fecha ? `${k.nombre} (${fechaCorta(k.fecha)})` : k.nombre)]];
+    const aoa = [['Chico','Preceptor', ...cols.map(k => k.fecha ? `${k.nombre} (${fechaCorta(k.fecha)})` : k.nombre)]];
     chicosDe(c).forEach(x => aoa.push([x.nombre, nombreResp(x), ...cols.map(k => k.agr ? agregado(x.id, k.agr, m).num ?? '' : txtValor(valor(x.id, k.mes, k.key)))]));
     const hc = XLSX.utils.aoa_to_sheet(aoa); hc['!cols'] = [{wch:22},{wch:18}, ...cols.map(() => ({wch:16}))];
     XLSX.utils.book_append_sheet(wb, hc, cursoNombre(c).replace(/[:\\/?*\[\]]/g,'').slice(0,31));
@@ -792,24 +843,30 @@ function exportarExcel(){
 }
 
 /* ============================ Dashboard ============================ */
-const WTIPOS = {kpi:'Indicador: real frente a objetivo', evolucion:'Evolución mensual (líneas)', cursos:'Comparativa por cursos (barras)', responsables:'Comparativa por responsables (barras)', chicos:'Ranking por chico (tabla)', anuales:'Asistencia a cada actividad anual (barras)'};
-const UNIDAD = {semanal:'semanas', mensual:'meses', anual:'asistencias posibles'};
+const WTIPOS = {kpi:'Indicador: real frente a objetivo', evolucion:'Evolución mensual (líneas)', cursos:'Comparativa por cursos (barras)', responsables:'Comparativa por preceptores (barras)', chicos:'Detalle por chico (tabla)', anuales:'Asistencia a cada actividad con fecha (barras)'};
+const UNIDAD = {semanal:'semanas', mensual:'meses', trimestral:'trimestres', ocasional:'asistencias posibles', anual:'asistencias posibles'};
 const cfgDash = () => S.config.find(d => d.id === 'dashboard') || {};
 function variables(){
-  const vs = S.eventos.filter(e => esMensual(e) || esSemanal(e)).sort(porOrden).map(e => ({id:e.id, nombre:e.nombre, tipo:tipoDe(e), evs:[e], objetivo:e.objetivo ?? null}));
-  if(S.eventos.some(esAnual)) vs.push({id:'__anuales', nombre:'Actividades anuales (todas)', tipo:'anual', evs:S.eventos.filter(esAnual), objetivo:cfgDash().objAnuales ?? null});
+  const cfg = cfgDash();
+  const vs = S.eventos.filter(e => esMensual(e) || esTrimestral(e) || esSemanal(e) || anualSinFecha(e)).sort(porOrden).map(e => ({id:e.id, nombre:e.nombre, tipo:tipoDe(e), evs:[e], objetivo:e.objetivo ?? null}));
+  const oc = {}; S.eventos.filter(esOcasional).forEach(e => (oc[e.nombre] = oc[e.nombre] || []).push(e));
+  Object.entries(oc).forEach(([n, evs]) => vs.push({id:'oc:' + n, nombre:n, tipo:'ocasional', evs, objetivo:(cfg.objOcasionales || {})[n] ?? null}));
+  const anu = S.eventos.filter(e => tipoDe(e) === 'anual' && e.fecha);
+  if(anu.length) vs.push({id:'__anuales', nombre:'Anuales con fecha (todas)', tipo:'anual', evs:anu, objetivo:cfg.objAnuales ?? null});
   return vs;
 }
 function tasaEv(e, chicos, meses){
-  const cc = chicos.filter(x => aplica(e, x.curso)); const t = tipoDe(e); let si = 0, tot = 0;
+  const cc = chicos.filter(x => aplica(e, x.curso)); const t = tipoDe(e); let si = 0, tot = 0; const vistos = new Set();
+  const una = (mm, key) => { if(vistos.has(mm) || mm > hoyMes()) return; vistos.add(mm); tot += cc.length; cc.forEach(x => { if(valor(x.id, mm, key) === 'si') si++; }); };
   meses.filter(m => m <= hoyMes()).forEach(m => {
     if(t === 'semanal'){ const n = semanasComputables(e, m).length; tot += n * cc.length; if(n) cc.forEach(x => si += agregado(x.id, e, m).si); }
-    else if(t === 'mensual'){ if(activaMes(e, m)){ tot += cc.length; cc.forEach(x => { if(valor(x.id, m, 'a_'+e.id) === 'si') si++; }); } }
-    else if(e.fecha && e.fecha.slice(0,7) === m && e.fecha <= hoyISO()){ tot += cc.length; cc.forEach(x => { if(valor(x.id, m, 'e_'+e.id) === 'si') si++; }); }
+    else if(t === 'mensual'){ if(activaMes(e, m)) una(m, 'a_'+e.id); }
+    else if(t === 'trimestral'){ if(activaTrim(e, m)) una(mesInicioTrim(m), 't_'+e.id); }
+    else if(anualSinFecha(e)){ una(mesAnualSF(m), 'y_'+e.id); }
+    else if(e.fecha && e.fecha.slice(0,7) === m && e.fecha <= hoyISO()) una(m, 'e_'+e.id);
   });
   return {si, tot};
-}
-function tasa(v, chicos, meses){ let si = 0, tot = 0; v.evs.forEach(e => { const r = tasaEv(e, chicos, meses); si += r.si; tot += r.tot; }); return {si, tot, p:pct(si, tot)}; }
+}function tasa(v, chicos, meses){ let si = 0, tot = 0; v.evs.forEach(e => { const r = tasaEv(e, chicos, meses); si += r.si; tot += r.tot; }); return {si, tot, p:pct(si, tot)}; }
 function estado(p, obj){ if(p === null || obj === null || obj === undefined || obj === '') return 'neutro'; if(p >= obj) return 'ok'; if(p >= obj * .8) return 'medio'; return 'bajo'; }
 const ESTADO_TXT = {ok:'Cumple el objetivo', medio:'Cerca del objetivo', bajo:'Por debajo del objetivo', neutro:'Sin objetivo definido'};
 function widgetsActuales(){
@@ -820,7 +877,7 @@ function widgetsActuales(){
   return w;
 }
 function aniosDisponibles(){ const s = new Set([cursoEscolarActual()]); S.registros.forEach(r => r.mes && s.add(cursoEscolarDe(r.mes))); S.eventos.forEach(e => e.fecha && s.add(cursoEscolarDe(e.fecha.slice(0,7)))); return [...s].sort((a,b) => b-a); }
-function eventosAnio(cursos, y){ const ms = new Set(mesesCurso(y)); return S.eventos.filter(e => esAnual(e) && e.fecha && ms.has(e.fecha.slice(0,7)) && cursos.some(c => aplica(e,c))).sort((a,b) => a.fecha.localeCompare(b.fecha)); }
+function eventosAnio(cursos, y){ const ms = new Set(mesesCurso(y)); return S.eventos.filter(e => conFecha(e) && ms.has(e.fecha.slice(0,7)) && cursos.some(c => aplica(e,c))).sort((a,b) => a.fecha.localeCompare(b.fecha)); }
 const colorEstado = (v, est, base) => ({ok:v('--ok'), medio:v('--star'), bajo:v('--no')})[est] || base;
 function lineaObjetivo(obj, n, v){ return obj === null || obj === undefined ? [] : [{type:'line', label:'Objetivo', data:Array(n).fill(obj), borderColor:v('--muted'), borderDash:[6,4], borderWidth:1.5, pointRadius:0, fill:false}]; }
 
@@ -843,9 +900,9 @@ function panelDash(vs){
       <label id="nw-var">Actividad<select name="variable">${opsVar}</select></label>
       <label>Título (opcional)<input name="titulo" maxlength="60" autocomplete="off"></label>
       <button class="btn" type="submit">Añadir gráfico</button></div></form>
-    <form class="panel" data-f="objetivos"><h3>Asistencia óptima de cada actividad</h3>
+    <form class="panel" data-f="objetivos"><h3>Cómputo y asistencia óptima de cada actividad</h3>
       <p class="nota" style="margin:0 0 .6rem">Indica el porcentaje que consideras óptimo. Semanal: 100 % es todas las semanas y 75 % es 3 de cada 4. Mensual: 100 % es todos los meses. Anual: porcentaje de chicos que deberían asistir. Déjalo vacío si no quieres objetivo.</p>
-      ${vs.length ? `<div class="envoltura"><table class="datos"><thead><tr><th>Actividad</th><th>Tipología</th><th>Óptimo (%)</th></tr></thead><tbody>${vs.map(v => `<tr><td>${esc(v.nombre)}</td><td>${cap(v.tipo)}</td><td><input type="number" name="obj_${v.id}" min="0" max="100" step="1" value="${v.objetivo ?? ''}" style="width:6rem" aria-label="Óptimo de ${esc(v.nombre)}"></td></tr>`).join('')}</tbody></table></div>
+      ${vs.length ? `<div class="envoltura"><table class="datos"><thead><tr><th>Actividad</th><th>Tipología</th><th>Cómputo mensual</th><th>Óptimo (%)</th></tr></thead><tbody>${vs.map(v => `<tr><td>${esc(v.nombre)}</td><td>${cap(v.tipo)}</td><td>${v.tipo === 'semanal' ? `<select name="agr_${v.id}" aria-label="Cómputo de ${esc(v.nombre)}">${Object.entries(AGREG).map(([k,t]) => `<option value="${k}" ${(v.evs[0].agregacion || 'suma') === k ? 'selected' : ''}>${t}</option>`).join('')}</select>` : '—'}</td><td><input type="number" name="obj_${v.id}" min="0" max="100" step="1" value="${v.objetivo ?? ''}" style="width:6rem" aria-label="Óptimo de ${esc(v.nombre)}"></td></tr>`).join('')}</tbody></table></div>
       <button class="btn" type="submit" style="margin-top:.7rem">Guardar objetivos</button>` : vacio('Crea primero actividades en la pestaña Actividades.')}</form>`;
 }
 function widget(w, i, n, cursos, meses, vs){
@@ -862,21 +919,22 @@ function widget(w, i, n, cursos, meses, vs){
       <p class="nota">${v.objetivo !== null ? `Óptimo ${v.objetivo} %. ` : ''}${ESTADO_TXT[est]}. ${r.si} de ${r.tot} ${UNIDAD[v.tipo]}, sumando todos los chicos.</p></section>`;
   }
   if(w.tipo === 'chicos'){
-    const filas = ch.map(x => { const r = tasa(v, [x], meses); return {x, r, est:estado(r.p, v.objetivo)}; }).filter(f => f.r.tot).sort((a,b) => a.r.p - b.r.p || porNombre(a.x, b.x));
-    return `<section class="bloque w w-ancho">${cab}${filas.length ? `<div class="envoltura"><table class="datos"><thead><tr><th>Chico</th>${cursos.length > 1 ? '<th>Curso</th>' : ''}<th>Responsable</th><th>Real</th></tr></thead><tbody>${
+    const filas = ch.map(x => { const r = tasa(v, [x], meses); return {x, r, est:estado(r.p, v.objetivo)}; }).filter(f => f.r.tot).sort((a,b) => porNombre(a.x, b.x));
+    return `<section class="bloque w w-ancho">${cab}${filas.length ? `<div class="envoltura"><table class="datos"><thead><tr><th>Chico</th>${cursos.length > 1 ? '<th>Curso</th>' : ''}<th>Preceptor</th><th>Real</th></tr></thead><tbody>${
       filas.map(f => `<tr class="fila-${f.est}"><td>${esc(f.x.nombre)}</td>${cursos.length > 1 ? `<td>${cortoCurso(f.x.curso)}</td>` : ''}<td>${esc(nombreResp(f.x))}</td><td class="n">${f.r.si}/${f.r.tot} ${pctTxt(f.r.p)}${barraMini(f.r.p)}</td></tr>`).join('')}</tbody></table></div>` : vacio('Todavía no hay datos.')}
-      <p class="nota">${v.objetivo !== null ? `Óptimo ${v.objetivo} %. ` : ''}Ordenado de menos a más.</p></section>`;
+      <p class="nota">${v.objetivo !== null ? `Óptimo ${v.objetivo} %. ` : ''}En rojo, por debajo del óptimo.</p></section>`;
   }
   if(w.tipo === 'evolucion'){
     const labels = meses.map(m => cap(MESES[+m.slice(5)-1].slice(0,3)));
     S.graficos.push({id, build:vv => ({type:'line', data:{labels, datasets:[
       ...cursos.filter(c => v.evs.some(e => aplica(e,c))).map(c => ({label:cortoCurso(c), data:meses.map(m => m > hoyMes() ? null : tasa(v, chicosDe(c), [m]).p), borderColor:vv(varCurso(c)), backgroundColor:vv(varCurso(c)), tension:.3, pointRadius:3, borderWidth:2.5})),
+      ...(cursos.length > 1 ? [{label:'Total', data:meses.map(m => m > hoyMes() ? null : tasa(v, ch, [m]).p), borderColor:vv('--ink'), backgroundColor:vv('--ink'), tension:.3, pointRadius:3, borderWidth:3.5}] : []),
       ...lineaObjetivo(v.objetivo, meses.length, vv)]}, options:{responsive:true, maintainAspectRatio:false, scales:{y:{min:0, max:100, ticks:{callback:x => x + '%'}}}, plugins:{legend:{position:'bottom'}}}})});
     return `<section class="bloque w">${cab}<div class="grafico"><canvas id="${id}"></canvas></div></section>`;
   }
   if(w.tipo === 'cursos' || w.tipo === 'responsables'){
     let etiquetas, datos;
-    if(w.tipo === 'cursos'){ const cs = cursos.filter(c => v.evs.some(e => aplica(e,c))); etiquetas = cs.map(cortoCurso); datos = cs.map(c => tasa(v, chicosDe(c), meses).p); }
+    if(w.tipo === 'cursos'){ const cs = cursos.filter(c => v.evs.some(e => aplica(e,c))); etiquetas = cs.map(cortoCurso); datos = cs.map(c => tasa(v, chicosDe(c), meses).p); if(cs.length > 1){ etiquetas.push('Total'); datos.push(tasa(v, ch, meses).p); } }
     else { const gs = cursos.flatMap(c => grupos(c).map(g => ({...g, c}))); etiquetas = gs.map(g => g.nombre + (cursos.length > 1 ? ` (${cortoCurso(g.c)})` : '')); datos = gs.map(g => tasa(v, g.chicos, meses).p); }
     S.graficos.push({id, build:vv => ({type:'bar', data:{labels:etiquetas, datasets:[{label:'Real', data:datos, backgroundColor:datos.map(p => colorEstado(vv, estado(p, v.objetivo), vv('--night-2'))), borderRadius:5, maxBarThickness:46}, ...lineaObjetivo(v.objetivo, etiquetas.length, vv)]},
       options:{responsive:true, maintainAspectRatio:false, scales:{y:{min:0, max:100, ticks:{callback:x => x + '%'}}}, plugins:{legend:{display:false}}}})});
@@ -910,70 +968,80 @@ function informe(conNombres){
   const vs = variables(); const nom = (v,i) => conNombres ? v.nombre : `Actividad ${i+1}`;
   const meses = mesesCurso(cursoEscolarActual()); const sg = [...S.sugerencias].sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
   const L = [`Informe de uso de la app E6 Mizar (${fechaLarga(hoyISO())}). Propón mejoras a partir de esto y prepárame el index.html actualizado, manteniendo todo lo anterior.`, '',
-    `Usuarios activos: ${S.usuarios.filter(u => u.activo !== false && u.rol === 'responsable').length} responsables y ${S.usuarios.filter(u => u.activo !== false && u.rol !== 'responsable').length} administradores.`,
+    `Usuarios activos: ${S.usuarios.filter(u => u.activo !== false && u.rol === 'responsable').length} preceptores y ${S.usuarios.filter(u => u.activo !== false && u.rol !== 'responsable').length} administradores.`,
     `Chicos por curso: ${CURSOS.map(c => `${c.nombre} ${chicosDe(c.id).length}`).join(', ')}.`, '', 'Actividades (tipología, cómputo, óptimo y asistencia real del curso escolar hasta hoy):'];
   vs.forEach((v,i) => { const r = tasa(v, CURSOS.flatMap(c => chicosDe(c.id)), meses); const e = v.evs[0];
     L.push(`- ${nom(v,i)}: ${v.tipo}${v.tipo === 'semanal' ? ', cómputo ' + AGREG_CORTO[e.agregacion || 'suma'].toLowerCase() : ''}, óptimo ${v.objetivo ?? 'sin definir'}${v.objetivo !== null ? ' %' : ''}, real ${pctTxt(r.p)}; por curso: ${CURSOS.filter(c => v.evs.some(x => aplica(x,c.id))).map(c => `${c.corto} ${pctTxt(tasa(v, chicosDe(c.id), meses).p)}`).join(', ')}.`); });
   L.push('', `Gráficos del dashboard: ${widgetsActuales().map(w => WTIPOS[w.tipo].split(' (')[0]).join('; ') || 'ninguno'}.`, '', `Sugerencias de los usuarios (${sg.length}):`);
-  sg.forEach(x => L.push(`- [${(x.fecha||'').slice(0,10)}, ${x.rol === 'responsable' ? 'responsable de ' + cortoCurso(x.curso) : rolTxt(x).toLowerCase()}, en la pestaña ${x.pestana}] ${x.texto}`));
+  sg.forEach(x => L.push(`- [${(x.fecha||'').slice(0,10)}, ${x.rol === 'responsable' ? 'preceptor de ' + cortoCurso(x.curso) : rolTxt(x).toLowerCase()}, en la pestaña ${x.pestana}] ${x.texto}`));
   if(!sg.length) L.push('- Ninguna todavía.');
   return L.join('\n');
 }
 function vistaMejoras(){
   const sg = [...S.sugerencias].sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
   return `<section class="panel"><h3>Informe para Claude</h3>
-    <p class="nota" style="margin:0 0 .6rem">Copia este texto y pégamelo en el chat para actualizar la app. Revísalo antes: puedes editarlo aquí mismo. No incluye nombres de chicos.</p>
+    <p class="nota" style="margin:0 0 .6rem">Copia este texto y pégamelo en el chat para actualizar la app. Revísalo antes: puedes editarlo aquí mismo. No incluye nombres de chicos. Las sugerencias resueltas se borran solas a los 15 días.</p>
     <label class="check" style="margin-bottom:.6rem"><input type="checkbox" data-ch="infNombres" ${S.infNombres ? 'checked' : ''}> Incluir los nombres de las actividades</label>
     <textarea id="informe" rows="12" style="width:100%;font:inherit;font-size:.9rem;border:1px solid var(--line);border-radius:9px;padding:.6rem;background:var(--surface-2);color:var(--ink)">${esc(informe(S.infNombres))}</textarea>
     <button class="btn" data-a="copiarInforme" style="margin-top:.6rem">Copiar informe</button></section>
     <h2 class="seccion">Sugerencias recibidas</h2>
-    ${sg.length ? `<section class="bloque"><ul class="lista">${sg.map(x => `<li><span class="li-nom" style="font-weight:${x.estado === 'vista' ? 400 : 600}">${esc(x.texto)}<small>${esc(x.nombre || '')}, ${x.rol === 'responsable' ? 'responsable de ' + cortoCurso(x.curso) : rolTxt(x).toLowerCase()}. ${x.fecha ? fechaLarga(x.fecha.slice(0,10)) : ''}. Pestaña ${esc(x.pestana || '')}</small></span>${x.estado !== 'vista' ? `<button class="btn sec peq" data-a="sgVista" data-id="${x.id}">Marcar como vista</button>` : ''}<button class="btn sec peq" data-a="sgBorrar" data-id="${x.id}">Eliminar</button></li>`).join('')}</ul></section>` : vacio('Todavía no hay sugerencias. Cualquier usuario puede enviarlas con el botón «Sugerir mejora».')}`;
+    ${sg.length ? `<section class="bloque"><ul class="lista">${sg.map(x => `<li><span class="li-nom" style="font-weight:${x.estado === 'vista' ? 400 : 600}">${esc(x.texto)}<small>${esc(x.nombre || '')}, ${x.rol === 'responsable' ? 'preceptor de ' + cortoCurso(x.curso) : rolTxt(x).toLowerCase()}. ${x.fecha ? fechaLarga(x.fecha.slice(0,10)) : ''}. Pestaña ${esc(x.pestana || '')}</small></span>${x.estado !== 'vista' ? `<button class="btn sec peq" data-a="sgVista" data-id="${x.id}">Marcar como resuelta</button>` : ''}<button class="btn sec peq" data-a="sgBorrar" data-id="${x.id}">Eliminar</button></li>`).join('')}</ul></section>` : vacio('Todavía no hay sugerencias. Cualquier usuario puede enviarlas con el botón «Sugerir mejora».')}`;
 }
 
 /* ============================ Eventos (admin) ============================ */
 function textoCursos(e){ return (!e.cursos || !e.cursos.length || e.cursos.length === CURSOS.length) ? 'Todos los cursos' : e.cursos.map(cortoCurso).join(', '); }
 function checksCursos(sel){ return CURSOS.map(c => `<label class="check"><input type="checkbox" name="cursos" value="${c.id}" ${!sel || !sel.length || sel.includes(c.id) ? 'checked' : ''}> ${c.nombre}</label>`).join(''); }
 function textoRango(e){ return (e.desde ? 'Desde el ' + fechaLarga(e.desde) : 'Desde el inicio') + (e.hasta ? ' hasta el ' + fechaLarga(e.hasta) : ''); }
+function ajustarCampos(f){
+  const tipo = (f.querySelector('[name=tipo]') || {}).value; const modo = (f.querySelector('[name=modoFecha]') || {}).value || 'dia';
+  f.querySelectorAll('[data-tipos]').forEach(el => { const ok = el.dataset.tipos.split(' ').includes(tipo) && (!el.dataset.modos || tipo !== 'anual' || el.dataset.modos.split(' ').includes(modo)); el.style.display = ok ? '' : 'none'; });
+}
 function camposEvento(e){
-  const tipo = e ? tipoDe(e) : 'semanal'; const pr = e ? 'ed' : 'ne';
-  const ver = (...ts) => ts.includes(tipo) ? '' : 'style="display:none"';
-  return `${e ? '' : `<label>Tipología<select name="tipo" id="ne-tipo">${Object.entries(TIPOS).map(([k,t]) => `<option value="${k}">${t}</option>`).join('')}</select></label>`}
+  const tipo = e ? tipoDe(e) : 'semanal';
+  const modo = e && tipo === 'anual' ? (!e.fecha ? 'no' : e.fecha.length === 7 ? 'mes' : 'dia') : 'dia';
+  const ver = (tipos, modos) => (tipos.split(' ').includes(tipo) && (!modos || tipo !== 'anual' || modos.split(' ').includes(modo))) ? '' : 'style="display:none"';
+  const nombresOc = [...new Set(S.eventos.filter(esOcasional).map(x => x.nombre))];
+  return `${e ? `<input type="hidden" name="tipo" value="${tipo}">` : `<label>Tipología<select name="tipo">${Object.entries(TIPOS).map(([k,t]) => `<option value="${k}">${t}</option>`).join('')}</select></label>`}
     <div class="campos">
-      <label>Nombre<input name="nombre" required maxlength="60" autocomplete="off" value="${esc(e ? e.nombre : '')}" placeholder="Por ejemplo, Tutoría o Deporte"></label>
-      <label class="${pr}-t ${pr}-anual" ${ver('anual')}>Fecha<input type="date" name="fecha" value="${esc(e && e.fecha ? e.fecha : hoyISO())}"></label>
-      <label class="${pr}-t ${pr}-semanal" ${ver('semanal')}>Cómputo mensual<select name="agregacion">${Object.entries(AGREG).map(([k,t]) => `<option value="${k}" ${e && e.agregacion === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+      <label>Nombre<input name="nombre" required maxlength="60" autocomplete="off" list="dl-ocasionales" value="${esc(e ? e.nombre : '')}" placeholder="Por ejemplo, Tutoría o Convivencia"></label>
+      <datalist id="dl-ocasionales">${nombresOc.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+      <label data-tipos="anual" ${ver('anual')}>Fecha<select name="modoFecha"><option value="dia" ${modo==='dia'?'selected':''}>Un día concreto</option><option value="mes" ${modo==='mes'?'selected':''}>Solo el mes</option><option value="no" ${modo==='no'?'selected':''}>Sin fecha (una vez cada curso)</option></select></label>
+      <label data-tipos="anual ocasional" data-modos="dia" ${ver('anual ocasional','dia')}>Día<input type="date" name="fecha" value="${esc(e && e.fecha && e.fecha.length === 10 ? e.fecha : hoyISO())}"></label>
+      <label data-tipos="anual" data-modos="mes" ${ver('anual','mes')}>Mes<input type="month" name="mesF" value="${esc(e && e.fecha ? e.fecha.slice(0,7) : hoyMes())}"></label>
     </div>
-    <div class="campos ${pr}-t ${pr}-semanal ${pr}-mensual" ${ver('semanal','mensual')}>
+    <div class="campos" data-tipos="semanal mensual trimestral" ${ver('semanal mensual trimestral')}>
       <label>Desde (opcional)<input type="date" name="desde" value="${esc(e && e.desde ? e.desde : '')}"></label>
       <label>Hasta (opcional)<input type="date" name="hasta" value="${esc(e && e.hasta ? e.hasta : '')}"></label>
     </div>
-    <p class="nota ${pr}-t ${pr}-semanal" ${ver('semanal')}>Se marca cada semana en la vista Semana. Suma: número de semanas que asistió. Media: porcentaje de semanas. Al menos una vez y Todas las semanas dan Sí o No. Una semana cuenta en el mes en que cae su jueves.</p>
-    <p class="nota ${pr}-t ${pr}-mensual" ${ver('mensual')}>Se marca una vez al mes en la vista Mes, como la tutoría.</p>
-    <p class="nota ${pr}-t ${pr}-anual" ${ver('anual')}>Se marca una sola vez, en la semana y el mes de su fecha.</p>
+    <p class="nota" data-tipos="semanal" ${ver('semanal')}>Se marca cada semana en la vista Semana. Su cómputo mensual (suma, media…) se elige en Dashboard, «Configurar dashboard».</p>
+    <p class="nota" data-tipos="mensual" ${ver('mensual')}>Se marca una vez al mes en la vista Mes.</p>
+    <p class="nota" data-tipos="trimestral" ${ver('trimestral')}>Se marca una vez por trimestre en la vista Mes: enero-marzo, abril-junio, julio-septiembre y octubre-diciembre.</p>
+    <p class="nota" data-tipos="ocasional" ${ver('ocasional')}>Crea una por cada fecha con el mismo nombre (por ejemplo, «Convivencia»). En el dashboard se suman todas las del mismo nombre.</p>
+    <p class="nota" data-tipos="anual" ${ver('anual')}>Con fecha, se marca en su semana o su mes. Sin fecha, aparece todo el curso en la vista Mes y se marca una vez (por ejemplo, el curso de retiro).</p>
     <fieldset><legend>Para qué cursos</legend><div class="cursos-check">${checksCursos(e ? e.cursos : null)}</div></fieldset>`;
 }
 function datosEvento(fd, tipo){
   const cursos = fd.getAll('cursos'); if(!cursos.length) return 'Elige al menos un curso.';
   const base = {nombre:String(fd.get('nombre')).trim(), cursos:cursos.length === CURSOS.length ? [] : cursos, tipo};
   if(!base.nombre) return 'Escribe el nombre.';
-  if(tipo === 'anual'){ if(!fd.get('fecha')) return 'Elige la fecha de la actividad.'; return {...base, fecha:fd.get('fecha')}; }
+  if(tipo === 'ocasional'){ if(!fd.get('fecha')) return 'Elige el día.'; return {...base, fecha:fd.get('fecha')}; }
+  if(tipo === 'anual'){ const modo = fd.get('modoFecha'); const fecha = modo === 'dia' ? fd.get('fecha') : modo === 'mes' ? fd.get('mesF') : '';
+    if(modo !== 'no' && !fecha) return 'Elige la fecha o marca «Sin fecha».'; return {...base, fecha:fecha || ''}; }
   const desde = fd.get('desde') || '', hasta = fd.get('hasta') || '';
   if(hasta && desde && hasta < desde) return 'La fecha «Hasta» no puede ser anterior a «Desde».';
-  return tipo === 'semanal' ? {...base, agregacion:fd.get('agregacion') || 'suma', desde, hasta} : {...base, desde, hasta};
-}
-function itemEvento(e, detalle){ return `<li><span class="li-nom">${esc(e.nombre)}<small>${detalle.replace(/\.\./g, '.')}</small></span><button class="btn sec peq" data-a="editarEvento" data-id="${e.id}">Editar</button><button class="btn sec peq" data-a="borrarEvento" data-id="${e.id}">Eliminar</button></li>`; }
+  return {...base, desde, hasta};
+}function itemEvento(e, detalle){ return `<li><span class="li-nom">${esc(e.nombre)}<small>${detalle.replace(/\.\./g, '.')}</small></span><button class="btn sec peq" data-a="editarEvento" data-id="${e.id}">Editar</button><button class="btn sec peq" data-a="borrarEvento" data-id="${e.id}">Eliminar</button></li>`; }
 function vistaEventos(){
   const form = `<form class="panel" data-f="nuevoEvento"><h3>Nueva actividad</h3>${camposEvento(null)}<button class="btn" type="submit">Crear actividad</button></form>`;
-  const men = S.eventos.filter(esMensual).sort(porOrden);
-  const sem = S.eventos.filter(esSemanal).sort(porNombre);
-  const anu = S.eventos.filter(e => esAnual(e) && e.fecha).sort((a,b) => b.fecha.localeCompare(a.fecha));
-  const porMes = {}; anu.forEach(e => (porMes[e.fecha.slice(0,7)] = porMes[e.fecha.slice(0,7)] || []).push(e));
+  const sec = (tit, arr, det, vac) => `<h2 class="seccion">${tit}</h2>${arr.length ? `<section class="bloque"><ul class="lista">${arr.map(e => itemEvento(e, det(e))).join('')}</ul></section>` : vacio(vac)}`;
+  const desc = (a,b) => (b.fecha||'').localeCompare(a.fecha||'');
   return `${form}
-    <h2 class="seccion">Actividades mensuales</h2>${men.length ? `<section class="bloque"><ul class="lista">${men.map(e => itemEvento(e, `${textoCursos(e)}. ${textoRango(e)}`)).join('')}</ul></section>` : vacio('No hay actividades mensuales. Crea una eligiendo la tipología «Mensual».')}
-    <h2 class="seccion">Actividades semanales</h2>${sem.length ? `<section class="bloque"><ul class="lista">${sem.map(e => itemEvento(e, `${AGREG[e.agregacion || 'suma']}. ${textoCursos(e)}. ${textoRango(e)}`)).join('')}</ul></section>` : vacio('No hay actividades semanales. Crea una eligiendo la tipología «Semanal».')}
-    <h2 class="seccion">Actividades anuales</h2>${Object.keys(porMes).length ? Object.entries(porMes).map(([m, es]) => `<section class="bloque"><div class="bloque-cab"><h2>${cap(mesLargo(m))}</h2><span class="meta">${es.length} ${es.length===1?'actividad':'actividades'}</span></div><ul class="lista">${es.map(e => itemEvento(e, `${fechaLarga(e.fecha)}. ${textoCursos(e)}`)).join('')}</ul></section>`).join('') : vacio('No hay actividades anuales. Crea una eligiendo la tipología «Anual».')}`;
+    ${sec('Mensuales', S.eventos.filter(esMensual).sort(porOrden), e => `${textoCursos(e)}. ${textoRango(e)}`, 'No hay actividades mensuales.')}
+    ${sec('Trimestrales', S.eventos.filter(esTrimestral).sort(porNombre), e => `${textoCursos(e)}. ${textoRango(e)}`, 'No hay actividades trimestrales.')}
+    ${sec('Semanales', S.eventos.filter(esSemanal).sort(porNombre), e => `Cómputo: ${AGREG_CORTO[e.agregacion || 'suma'].toLowerCase()}. ${textoCursos(e)}. ${textoRango(e)}`, 'No hay actividades semanales.')}
+    ${sec('Ocasionales', S.eventos.filter(esOcasional).sort((a,b) => porNombre(a,b) || desc(a,b)), e => `${fechaLarga(e.fecha)}. ${textoCursos(e)}`, 'No hay actividades ocasionales.')}
+    ${sec('Anuales', S.eventos.filter(e => tipoDe(e) === 'anual').sort(desc), e => `${e.fecha ? fechaLarga(e.fecha) : 'Sin fecha: una vez cada curso'}. ${textoCursos(e)}`, 'No hay actividades anuales.')}`;
 }
-
 /* ============================ Usuarios (admin) ============================ */
 function puedeEditarUsuario(u){ if(u.id === S.profile.id) return false; if(esPrincipal()) return true; return esAdmin() && u.rol === 'responsable'; }
 function vistaUsuarios(){
@@ -982,7 +1050,7 @@ function vistaUsuarios(){
     <label>Nombre<input name="nombre" required maxlength="40" autocomplete="off"></label>
     <label>Usuario<input name="usuario" required maxlength="30" autocapitalize="none" autocomplete="off" placeholder="Por ejemplo, pablo"></label>
     <label>Contraseña inicial<input type="text" name="password" required minlength="6" autocomplete="off" placeholder="Mínimo 6 caracteres"></label>
-    <label>Rol<select name="rol" id="nu-rol"><option value="responsable">Responsable</option>${sup ? '<option value="admin">Administrador</option>' : ''}</select></label>
+    <label>Rol<select name="rol" id="nu-rol"><option value="responsable">Preceptor</option>${sup ? '<option value="admin">Administrador</option>' : ''}</select></label>
     <label id="nu-curso-l">Curso<select name="curso">${CURSOS.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('')}</select></label>
     <button class="btn" type="submit">Dar de alta</button></div>
     <p class="nota">El usuario solo admite letras sin tilde, números, punto y guion. Comparte con la persona su usuario y su contraseña inicial; podrá cambiarla pulsando su nombre, arriba. Si alguien olvida la contraseña, pulsa «Nuevo acceso»: se crea otro usuario con el mismo perfil y sus chicos pasan a él.</p></form>`;
@@ -996,7 +1064,7 @@ function vistaUsuarios(){
   const admins = S.usuarios.filter(u => u.rol !== 'responsable').sort((a,b) => (a.rol === 'superadmin' ? -1 : b.rol === 'superadmin' ? 1 : porNombre(a,b)));
   return `${form}<section class="bloque"><div class="bloque-cab"><h2>Administración</h2></div><ul class="lista">${admins.map(fila).join('')}</ul></section>
     ${CURSOS.map(c => { const rs = S.usuarios.filter(u => u.rol === 'responsable' && u.curso === c.id).sort((a,b) => (a.activo === false) - (b.activo === false) || porNombre(a,b));
-      return `<section class="bloque">${cabBloque(c.id, `<span class="meta">${rs.filter(r => r.activo !== false).length} responsables</span>`)}${rs.length ? `<ul class="lista">${rs.map(fila).join('')}</ul>` : vacio('Sin responsables. Dalos de alta con el formulario de arriba.')}</section>`; }).join('')}`;
+      return `<section class="bloque">${cabBloque(c.id, `<span class="meta">${rs.filter(r => r.activo !== false).length} preceptores</span>`)}${rs.length ? `<ul class="lista">${rs.map(fila).join('')}</ul>` : vacio('Sin preceptores. Dalos de alta con el formulario de arriba.')}</section>`; }).join('')}`;
 }
 
 const VISTAS = {seguimiento:vistaSeguimiento, chicos:vistaChicos, resumen:vistaResumen, dashboard:vistaDashboard, eventos:vistaEventos, usuarios:vistaUsuarios, mejoras:vistaMejoras};
@@ -1030,7 +1098,7 @@ const CLICK = {
     const x = S.chicos.find(c => c.id === b.dataset.id); if(!x) return;
     const cuerpo = `<label>Nombre<input name="nombre" required maxlength="60" value="${esc(x.nombre)}"></label>${esAdmin() ? `
       <label>Curso<select name="curso">${CURSOS.map(c => `<option value="${c.id}" ${c.id===x.curso?'selected':''}>${c.nombre}</option>`).join('')}</select></label>
-      <p>Si le cambias de curso, queda sin responsable hasta que le asignes uno nuevo.</p>
+      <p>Si le cambias de curso, queda sin preceptor hasta que le asignes uno nuevo.</p>
       <label class="check"><input type="checkbox" name="baja"> Dar de baja (deja de aparecer en tablas y resúmenes)</label>` : ''}`;
     const fd = await modal('Editar chico', cuerpo, 'Guardar cambios'); if(!fd) return;
     const datos = {nombre:String(fd.get('nombre')).trim() || x.nombre};
@@ -1040,7 +1108,7 @@ const CLICK = {
   reactivar(b){ guardar(() => DB.set('chicos', b.dataset.id, {activo:true}, true), 'Chico reactivado'); },
   async editarEvento(b){
     const e = S.eventos.find(x => x.id === b.dataset.id); if(!e) return; const t = tipoDe(e);
-    const aviso = {semanal:'<p>Si cambias el cómputo mensual, se recalculan todos los meses.</p>', mensual:'<p>Si acortas las fechas, las marcas de los meses que quedan fuera dejan de contar.</p>', anual:'<p>Si cambias la fecha a otro mes, las marcas ya hechas se quedan en el mes original.</p>'}[t];
+    const aviso = {trimestral:'<p>Si acortas las fechas, los trimestres que quedan fuera dejan de contar.</p>', ocasional:'<p>Si cambias la fecha a otro mes, lo marcado se queda en el mes original.</p>', semanal:'<p>El cómputo mensual se cambia en Dashboard, «Configurar dashboard».</p>', mensual:'<p>Si acortas las fechas, las marcas de los meses que quedan fuera dejan de contar.</p>', anual:'<p>Si cambias de «con fecha» a «sin fecha», o de mes, lo ya marcado deja de contar.</p>'}[t];
     const fd = await modal('Editar actividad ' + t, camposEvento(e) + aviso, 'Guardar cambios'); if(!fd) return;
     const d = datosEvento(fd, t); if(typeof d === 'string'){ toast(d); return; }
     guardar(() => DB.set('eventos', e.id, d, true), 'Cambios guardados');
@@ -1079,10 +1147,15 @@ const CLICK = {
     guardar(() => DB.cambiarPassword(String(fd.get('actual')), String(fd.get('nueva'))), 'Contraseña cambiada');
   },
   sugerir(){ abrirSugerencia(); },
+  vistaTipo(b){ S.vista = b.dataset.v; render(); },
+  miMenu(){ const p = S.profile; menuModal(p.nombre, `<p class="nota" style="margin:0">${esc(rolTxt(p))}. Usuario: ${esc(p.usuario || '')}</p>
+    <button class="btn sec" data-a="miCuenta" type="button">Cambiar mi contraseña</button><button class="btn sec" data-a="sugerir" type="button">Sugerir una mejora</button><button class="btn sec" data-a="salir" type="button">Salir</button>`); },
+  mas(){ const resto = tabsDisponibles().filter(t => !PRIMARIAS.includes(t.id));
+    menuModal('Más opciones', resto.map(t => `<button class="btn sec" data-a="vista" data-v="${t.id}" type="button">${t.nombre}</button>`).join('') + `<button class="btn sec" data-a="sugerir" type="button">Sugerir una mejora</button><button class="btn sec" data-a="miMenu" type="button">Mi cuenta</button>`); },
   dashEditar(){ S.dashEdit = !S.dashEdit; render(); },
   wMover(b){ const ws = [...widgetsActuales()]; const i = +b.dataset.i, j = i + +b.dataset.d; if(j < 0 || j >= ws.length) return; [ws[i], ws[j]] = [ws[j], ws[i]]; guardarWidgets(ws); },
   wQuitar(b){ const ws = widgetsActuales().filter((w,i) => i !== +b.dataset.i); guardarWidgets(ws); },
-  sgVista(b){ guardar(() => DB.set('sugerencias', b.dataset.id, {estado:'vista'}, true)); },
+  sgVista(b){ guardar(() => DB.set('sugerencias', b.dataset.id, {estado:'vista', resuelta:new Date().toISOString()}, true), 'Marcada como resuelta'); },
   async sgBorrar(b){ const fd = await modal('Eliminar sugerencia', '<p>La sugerencia se borrará definitivamente.</p>', 'Eliminar', true); if(fd) guardar(() => DB.del('sugerencias', b.dataset.id), 'Sugerencia eliminada'); },
   async copiarInforme(){
     const t = document.getElementById('informe'); if(!t) return;
@@ -1122,10 +1195,10 @@ const SUBMIT = {
     }
   },
   async nuevoEvento(f){
-    const fd = new FormData(f); const tipo = ['semanal','mensual','anual'].includes(fd.get('tipo')) ? fd.get('tipo') : 'anual';
+    const fd = new FormData(f); const tipo = Object.keys(TIPOS).includes(fd.get('tipo')) ? fd.get('tipo') : 'anual';
     const d = datosEvento(fd, tipo); if(typeof d === 'string'){ toast(d); return; }
-    if(tipo === 'mensual') d.orden = Date.now();
-    const msg = {semanal:`«${d.nombre}» creada: aparecerá cada semana`, mensual:`«${d.nombre}» creada: aparecerá cada mes`, anual:`«${d.nombre}» creada para el ${d.fecha ? fechaLarga(d.fecha) : ''}`}[tipo];
+    if(tipo === 'mensual' || tipo === 'trimestral') d.orden = Date.now(); if(tipo === 'semanal') d.agregacion = 'suma';
+    const msg = `«${d.nombre}» creada`;
     if(await guardar(() => DB.add('eventos', d), msg)) finForm(f);
   },
   async nuevoUsuario(f){
@@ -1148,7 +1221,10 @@ const SUBMIT = {
     const val = v => { const x = String(fd.get('obj_' + v.id) ?? '').trim(); if(x === '') return null; const n = Math.max(0, Math.min(100, Math.round(+x))); return isNaN(n) ? null : n; };
     await guardar(async () => {
       for(const v of vs){ const n = val(v); if(n === v.objetivo) continue;
-        if(v.id === '__anuales') await DB.set('config', 'dashboard', {objAnuales:n}, true); else await DB.set('eventos', v.id, {objetivo:n}, true); }
+        if(v.id === '__anuales') await DB.set('config', 'dashboard', {objAnuales:n}, true);
+        else if(v.id.startsWith('oc:')) await DB.set('config', 'dashboard', {objOcasionales:{...(cfgDash().objOcasionales || {}), [v.nombre]:n}}, true);
+        else await DB.set('eventos', v.id, {objetivo:n}, true); }
+      for(const v of vs.filter(x => x.tipo === 'semanal')){ const a = fd.get('agr_' + v.id); if(a && a !== (v.evs[0].agregacion || 'suma')) await DB.set('eventos', v.id, {agregacion:a}, true); }
     }, 'Objetivos guardados');
     if(document.activeElement) document.activeElement.blur(); render();
   }
@@ -1158,17 +1234,17 @@ const CHANGE = {
   anio(t){ S.anio = +t.value; render(); },
   infNombres(t){ S.infNombres = t.checked; render(); },
   resp(t){ const x = S.chicos.find(c => c.id === t.dataset.id); if(!x) return; const n = nombreUsuario(t.value);
-    guardar(() => DB.set('chicos', x.id, {responsable:t.value}, true), t.value ? `${x.nombre} pasa a ${n}` : `${x.nombre} queda sin responsable`); },
+    guardar(() => DB.set('chicos', x.id, {responsable:t.value}, true), t.value ? `${x.nombre} pasa a ${n}` : `${x.nombre} queda sin preceptor`); },
   ucurso(t){ const u = S.usuarios.find(x => x.id === t.dataset.id); if(!u) return;
     guardar(() => DB.set('usuarios', u.id, {curso:t.value}, true), `${u.nombre} pasa a ${cursoNombre(t.value)}. Reasigna sus chicos anteriores.`); }
 };
 
-document.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if(!b || !CLICK[b.dataset.a]) return; e.preventDefault(); CLICK[b.dataset.a](b); });
+document.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if(!b || !CLICK[b.dataset.a]) return; e.preventDefault(); const dl = b.closest('dialog'); if(dl && b.type !== 'submit') dl.close(); CLICK[b.dataset.a](b); });
 document.addEventListener('submit', e => { const f = e.target.closest('[data-f]'); if(!f || !SUBMIT[f.dataset.f]) return; e.preventDefault(); SUBMIT[f.dataset.f](f); });
 document.addEventListener('change', e => {
   const t = e.target;
   if(t.id === 'nc-curso'){ const s = document.getElementById('nc-resp'); if(s) s.innerHTML = opcionesResp(t.value, ''); return; }
-  if(t.id === 'ne-tipo'){ document.querySelectorAll('.ne-t').forEach(el => el.style.display = el.classList.contains('ne-' + t.value) ? '' : 'none'); return; }
+  if((t.name === 'tipo' || t.name === 'modoFecha') && t.form && t.form.querySelector('[data-tipos]')){ ajustarCampos(t.form); return; }
   if(t.id === 'nw-tipo'){ const l = document.getElementById('nw-var'); if(l) l.style.display = t.value === 'anuales' ? 'none' : ''; return; }
   if(t.id === 'nu-rol'){ const l = document.getElementById('nu-curso-l'); if(l) l.style.display = t.value === 'admin' ? 'none' : ''; return; }
   if(t.dataset && CHANGE[t.dataset.ch]) CHANGE[t.dataset.ch](t);
@@ -1176,6 +1252,9 @@ document.addEventListener('change', e => {
 document.addEventListener('focusout', () => { if(S.pend) setTimeout(() => { if(S.pend && !editando()) render(); }, 60); });
 
 arrancar();
+// Al salir de la app más de 2 minutos, se cierra la sesión.
+let ocultoDesde = 0;
+document.addEventListener('visibilitychange', () => { if(document.hidden){ ocultoDesde = Date.now(); return; } if(ocultoDesde && S.user && Date.now() - ocultoDesde > 2 * 60 * 1000){ DB.logout(); toast('Sesión cerrada por seguridad. Vuelve a entrar.'); } ocultoDesde = 0; });
 if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
